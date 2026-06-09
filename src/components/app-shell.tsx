@@ -6,12 +6,15 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Briefcase, Target, Send, Inbox, FileText, User, Crown, Settings, LogOut, Menu,
+  Home, Sparkles, ClipboardCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { PwaInstall } from "@/components/pwa-install";
 import { cn } from "@/lib/utils";
 
+// Full navigation — used by the desktop sidebar and the mobile drawer.
 const NAV = [
   { href: "/", label: "Overview", Icon: LayoutDashboard },
   { href: "/jobs", label: "All Jobs", Icon: Briefcase },
@@ -24,9 +27,20 @@ const NAV = [
   { href: "/settings", label: "Settings", Icon: Settings },
 ];
 
+// The 4 essentials for the mobile/tablet liquid-glass bottom bar — the core
+// job-application loop: see your dashboard → matches → apply → track.
+const BOTTOM_NAV = [
+  { href: "/", label: "Home", Icon: Home },
+  { href: "/matches", label: "Matches", Icon: Sparkles },
+  { href: "/quick-apply", label: "Apply", Icon: Send },
+  { href: "/applications", label: "Applied", Icon: ClipboardCheck },
+];
+
+const isActivePath = (path: string, href: string) =>
+  href === "/" ? path === "/" : path.startsWith(href);
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = usePathname();
-  const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   return (
     <nav className="flex flex-1 flex-col gap-1">
       {NAV.map(({ href, label, Icon }) => (
@@ -36,7 +50,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           onClick={onNavigate}
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-            isActive(href)
+            isActivePath(path, href)
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
           )}
@@ -52,7 +66,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5 px-2 py-1">
-      <Image src="/logo.png" alt="Featers" width={30} height={30} className="rounded-lg" />
+      <Image src="/logo.png" alt="Featers" width={32} height={32} className="rounded-lg" priority />
       <span className="text-lg font-extrabold tracking-tight">Featers</span>
     </Link>
   );
@@ -69,11 +83,46 @@ function UserFooter() {
     router.push("/login");
   };
   return (
-    <div className="mt-auto border-t pt-3">
-      {email && <p className="truncate px-2 pb-2 text-xs text-muted-foreground">{email}</p>}
+    <div className="mt-auto space-y-2 border-t pt-3">
+      <PwaInstall fullWidth />
+      {email && <p className="truncate px-2 text-xs text-muted-foreground">{email}</p>}
       <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={signOut}>
         <LogOut className="h-4 w-4" /> Sign out
       </Button>
+    </div>
+  );
+}
+
+// Floating liquid-glass tab bar — mobile + tablet only (hidden ≥ lg).
+function BottomNav() {
+  const path = usePathname();
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-3 safe-bottom lg:hidden">
+      <nav className="lg-glass pointer-events-auto flex w-full max-w-md items-stretch justify-around gap-1 rounded-[28px] px-2 py-2">
+        {BOTTOM_NAV.map(({ href, label, Icon }) => {
+          const active = isActivePath(path, href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className="relative flex flex-1 flex-col items-center gap-1 rounded-2xl py-1 text-center"
+            >
+              <span
+                className={cn(
+                  "lg-anim grid h-9 w-14 place-items-center rounded-full",
+                  active ? "lg-pill text-white" : "text-muted-foreground",
+                )}
+              >
+                <Icon className="h-[22px] w-[22px]" />
+              </span>
+              <span className={cn("text-[10px] font-semibold leading-none", active ? "text-primary" : "text-muted-foreground")}>
+                {label}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
@@ -93,7 +142,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <UserFooter />
       </aside>
 
-      {/* Mobile top bar */}
+      {/* Mobile / tablet top bar (full nav via drawer) */}
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur lg:hidden">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
@@ -109,8 +158,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Brand />
       </header>
 
-      {/* Main content — pages provide their own header/padding */}
-      <main className="lg:pl-64">{children}</main>
+      {/* Main content — extra bottom padding on mobile so the floating bar never overlaps */}
+      <main className="pb-safe-nav lg:pl-64 lg:pb-0">{children}</main>
+
+      <BottomNav />
     </div>
   );
 }

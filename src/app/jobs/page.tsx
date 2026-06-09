@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import JobBoardCard from "../_components/JobBoardCard";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { GlassSearch } from "@/components/ui/glass-search";
+import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import type { Job } from "@/lib/types";
 
 interface Facet { value: string; n: number; }
@@ -68,15 +68,12 @@ export default function JobsPage() {
 
       {/* Search + filter pills */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[240px] flex-1">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="h-11 rounded-full border-border pl-11 shadow-sm"
-            placeholder="Search job title, skill, company"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <GlassSearch
+          containerClassName="min-w-[240px] flex-1"
+          placeholder="Search job title, skill, company"
+          value={search}
+          onChange={setSearch}
+        />
         <Dropdown value={location} onChange={setLocation} placeholder="Location" opts={facets.locations} />
         <Dropdown value={category} onChange={setCategory} placeholder="Category" opts={facets.categories} />
         <Dropdown value={type} onChange={setType} placeholder="Type" opts={facets.types} />

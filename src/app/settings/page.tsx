@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import { Check, X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface SettingsView {
   auth_method: "smtp" | "google";
@@ -29,13 +29,16 @@ export default function SettingsPage() {
   const [s, setS] = useState<SettingsView | null>(null);
   const [pass, setPass] = useState("");
   const [busy, setBusy] = useState<"save" | "test" | null>(null);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = () => fetch("/api/settings").then((r) => r.json()).then(setS);
   useEffect(() => {
     load();
     const g = new URLSearchParams(window.location.search).get("google");
-    if (g && GOOGLE_MSG[g]) { setMsg(GOOGLE_MSG[g]); window.history.replaceState({}, "", "/settings"); }
+    if (g && GOOGLE_MSG[g]) {
+      const m = GOOGLE_MSG[g];
+      (m.ok ? toast.success : toast.error)(m.text);
+      window.history.replaceState({}, "", "/settings");
+    }
   }, []);
 
   const set = (patch: Partial<SettingsView>) => setS((p) => p ? { ...p, ...patch } : p);
@@ -45,29 +48,31 @@ export default function SettingsPage() {
   const persistSmtp = async (): Promise<boolean> => {
     if (!s) return false;
     const email = s.smtp_user.trim();
-    if (!email) { setMsg({ ok: false, text: "Enter your email address first." }); return false; }
-    if (!pass && !s.has_pass) { setMsg({ ok: false, text: "Enter your app password first." }); return false; }
+    if (!email) { toast.error("Enter your email address first."); return false; }
+    if (!pass && !s.has_pass) { toast.error("Enter your app password first."); return false; }
     await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ smtp_host: s.smtp_host, smtp_port: s.smtp_port, smtp_user: email, ...(pass ? { smtp_pass: pass } : {}) }) });
     setPass(""); await load();
     return true;
   };
   const saveSmtp = async () => {
-    setBusy("save"); setMsg(null);
+    setBusy("save");
     const ok = await persistSmtp();
     setBusy(null);
-    if (ok) setMsg({ ok: true, text: "Saved. Now test the connection." });
+    if (ok) toast.success("Saved. Now test the connection.");
   };
   // Always save what's on screen first, then verify — so Test reflects the form,
   // not whatever happened to be saved before.
   const test = async () => {
-    setBusy("test"); setMsg(null);
+    setBusy("test");
     if (!(await persistSmtp())) { setBusy(null); return; }
     const d = await (await fetch("/api/settings/test", { method: "POST" })).json();
-    setBusy(null); setMsg(d.ok ? { ok: true, text: "Connected! Your email is ready to send applications." } : { ok: false, text: d.error ?? "Could not connect." });
+    setBusy(null);
+    if (d.ok) toast.success("Connected! Your email is ready to send applications.");
+    else toast.error(d.error ?? "Could not connect.");
     await load();
   };
-  const disconnectGoogle = async () => { await fetch("/api/google/disconnect", { method: "POST" }); await load(); setMsg({ ok: true, text: "Gmail disconnected." }); };
+  const disconnectGoogle = async () => { await fetch("/api/google/disconnect", { method: "POST" }); await load(); toast.success("Gmail disconnected."); };
 
   if (!s) {
     return (
@@ -99,15 +104,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-6">
-        {msg && (
-          <div className={cn(
-            "rounded-lg border px-4 py-3 text-sm",
-            msg.ok ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive",
-          )}>
-            {msg.text}
-          </div>
-        )}
-
         {/* One-click Gmail */}
         <Card>
           <CardHeader>

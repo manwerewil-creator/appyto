@@ -19,6 +19,7 @@ export interface Job {
   posted_at: string | null;
   closes_at: string | null;
   is_open: boolean;
+  logo_url?: string | null;   // company logo (derived from the employer's email domain)
 }
 
 export interface JobPreferences {

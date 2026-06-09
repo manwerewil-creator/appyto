@@ -16,7 +16,14 @@ export const metadata: Metadata = {
   title: "Featers",
   description: "Aggregate every job in Zimbabwe, match with code, and apply for you.",
   manifest: "/manifest.json",
-  icons: { icon: "/icon.svg", apple: "/apple-icon.png" },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/logo.png", sizes: "192x192", type: "image/png" },
+      { url: "/logo.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: { url: "/apple-icon.png", sizes: "180x180" },
+  },
   appleWebApp: { capable: true, title: "Featers", statusBarStyle: "default" },
 };
 
@@ -33,13 +40,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppShell>{children}</AppShell>
         <Toaster />
         <script
-          // The PWA service worker kept breaking Google OAuth (intercepted
-          // /auth/callback, served stale JS → dead login button + login loop).
-          // It has been retired: actively unregister any existing worker and
-          // clear its caches so already-affected browsers recover on next load.
+          // Register the minimal install-enabling service worker (public/sw.js).
+          // It only caches hashed static assets and never touches navigations or
+          // /auth, so it can't regress the OAuth flow — and it lets the browser
+          // offer "Install app".
           dangerouslySetInnerHTML={{
             __html:
-              `if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}`,
+              `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}`,
           }}
         />
       </body>
