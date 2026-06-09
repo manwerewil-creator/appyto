@@ -7,6 +7,15 @@ import { createPayment } from "@/lib/paynow";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Paynow requires absolute http(s) URLs for return/result. APP_URL is often
+// misconfigured (missing scheme, trailing slash, or empty), so normalise it and
+// fall back to the real request origin. Guarantees an "https://host" base.
+function resolveBase(req: NextRequest): string {
+  const raw = (process.env.APP_URL ?? "").trim().replace(/\/+$/, "");
+  if (raw) return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  return req.nextUrl.origin;
+}
+
 export async function POST(req: NextRequest) {
   const { user } = await getAuth();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -19,7 +28,7 @@ export async function POST(req: NextRequest) {
   }
 
   const reference = `APPYTO-${user.id.slice(0, 8)}-${Date.now().toString(36)}`;
-  const base = process.env.APP_URL || req.nextUrl.origin;
+  const base = resolveBase(req);
 
   try {
     const { redirectUrl, pollUrl } = await createPayment({
