@@ -1,92 +1,88 @@
-// Server-side apply service. Turns "click Apply" into a real sent email, with
-// dedupe, a daily safety cap, and a full audit record. Used by /api/apply and
-// /api/apply/auto.
+// Apply service — Supabase-backed, per-user. Sends a real email from the user's
+// connected mailbox, dedupes, and enforces the plan's daily cap.
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  getJobs, getProfile, getSettings, hasApplied, appliedToday,
-  addApplication, updateApplication, readCv,
-} from "./db";
-import { sendApplication, emailReady } from "./mailer";
+  fetchJobById, fetchProfile, fetchCreds, hasApplied, appliedToday,
+  addApplication, updateApplication, fetchJobs, type ProfileRow,
+} from "./data";
+import { credsToConfig, emailReady, sendApplication } from "./mailer";
+import { supabaseAdmin } from "./supabase/server";
 import { matchJobs, applyableJobs } from "./match";
-import type { Application } from "./types";
+import { PLANS, type PlanId } from "./plans";
+import type { JobPreferences } from "./types";
 
-function newId() {
-  return `app_${Date.now().toString(36)}_${Math.round(performance.now() % 1e6).toString(36)}`;
-}
-
-export interface ApplyOutcome {
-  ok: boolean;
-  status: Application["status"];
-  reason?: string;
-  application?: Application;
-}
-
-/** Apply to a single job by id. Sends a real email from your configured mailbox.
- *  `override` lets the user supply a fully custom subject/body instead of the template. */
-export async function applyToJob(jobId: string, override?: { subject?: string; body?: string }): Promise<ApplyOutcome> {
-  const [jobs, profile, settings] = await Promise.all([getJobs(), getProfile(), getSettings()]);
-  const job = jobs.find((j) => j.id === jobId);
-  if (!job) return { ok: false, status: "failed", reason: "job not found" };
-  if (!emailReady(settings)) return { ok: false, status: "failed", reason: "Connect your email in Settings first." };
-  if (!job.apply_email) return { ok: false, status: "skipped", reason: "This job has no email to apply to." };
-  if (await hasApplied(job.id)) return { ok: false, status: "skipped", reason: "Already applied to this job." };
-
-  const record: Application = {
-    id: newId(),
-    job_id: job.id,
-    job_title: job.title,
-    company: job.company,
-    to_email: job.apply_email,
-    status: "queued",
-    subject: null,
-    error: null,
-    created_at: new Date().toISOString(),
-    sent_at: null,
+function prefsOf(p: ProfileRow | null): JobPreferences {
+  return {
+    desired_titles: p?.desired_titles ?? [],
+    desired_categories: p?.desired_categories ?? [],
+    desired_locations: p?.desired_locations ?? [],
+    desired_job_types: p?.desired_job_types ?? [],
+    keywords: p?.keywords ?? [],
   };
-  await addApplication(record);
+}
+
+export function effectiveCap(p: ProfileRow | null): number {
+  const planCap = PLANS[(p?.plan_id as PlanId) ?? "free"]?.dailyApplyCap ?? 0;
+  const self = p?.daily_cap ?? planCap;
+  return Math.min(planCap, self);
+}
+
+async function getCv(p: ProfileRow | null) {
+  if (!p?.cv_path) return undefined;
+  const { data } = await supabaseAdmin().storage.from("cvs").download(p.cv_path);
+  if (!data) return undefined;
+  return { filename: p.cv_path.split("/").pop() || "cv.pdf", content: Buffer.from(await data.arrayBuffer()) };
+}
+
+export interface ApplyOutcome { ok: boolean; status: string; reason?: string; }
+
+export async function applyToJob(
+  sb: SupabaseClient, userId: string, jobId: string,
+  override?: { subject?: string; body?: string },
+): Promise<ApplyOutcome> {
+  const [job, profile, creds] = await Promise.all([
+    fetchJobById(sb, jobId), fetchProfile(sb, userId), fetchCreds(sb, userId),
+  ]);
+  if (!job) return { ok: false, status: "failed", reason: "job not found" };
+  if (!emailReady(creds)) return { ok: false, status: "failed", reason: "Connect your email in Settings first." };
+  if (!job.apply_email) return { ok: false, status: "skipped", reason: "This job has no email to apply to." };
+  if (await hasApplied(sb, userId, job.id)) return { ok: false, status: "skipped", reason: "Already applied to this job." };
+
+  const rec = await addApplication(sb, {
+    user_id: userId, job_id: job.id, job_title: job.title, company: job.company,
+    to_email: job.apply_email, status: "queued",
+  }) as { id: string };
 
   try {
-    let cv: { filename: string; content: Buffer } | undefined;
-    if (profile.cv_filename) {
-      cv = { filename: profile.cv_filename, content: await readCv(profile.cv_filename) };
-    }
-    const { subject } = await sendApplication({ settings, job, profile, cv, override });
-    const patch = { status: "sent" as const, subject, sent_at: new Date().toISOString() };
-    await updateApplication(record.id, patch);
-    return { ok: true, status: "sent", application: { ...record, ...patch } };
+    const cv = await getCv(profile);
+    const { subject } = await sendApplication({ config: credsToConfig(creds!), job, profile: profile ?? {}, cv, override });
+    await updateApplication(sb, rec.id, { status: "sent", subject, sent_at: new Date().toISOString() });
+    return { ok: true, status: "sent" };
   } catch (err: any) {
-    const patch = { status: "failed" as const, error: String(err?.message ?? err) };
-    await updateApplication(record.id, patch);
-    return { ok: false, status: "failed", reason: patch.error, application: { ...record, ...patch } };
+    await updateApplication(sb, rec.id, { status: "failed", error: String(err?.message ?? err) });
+    return { ok: false, status: "failed", reason: String(err?.message ?? err) };
   }
 }
 
 export interface AutoApplyResult {
-  attempted: number; sent: number; skipped: number; failed: number;
-  remainingToday: number; results: ApplyOutcome[];
+  attempted: number; sent: number; skipped: number; failed: number; remainingToday: number;
 }
 
-/** Auto-apply to your best matches, up to the daily cap. */
-export async function autoApply(max?: number): Promise<AutoApplyResult> {
-  const [jobs, profile] = await Promise.all([getJobs(), getProfile()]);
-  const alreadyToday = await appliedToday();
-  const remaining = Math.max(0, profile.daily_cap - alreadyToday);
-  const budget = Math.min(remaining, max ?? remaining);
+export async function autoApply(sb: SupabaseClient, userId: string, max?: number): Promise<AutoApplyResult> {
+  const [jobs, profile] = await Promise.all([fetchJobs(sb), fetchProfile(sb, userId)]);
+  const cap = effectiveCap(profile);
+  const already = await appliedToday(sb, userId);
+  const budget = Math.min(Math.max(0, cap - already), max ?? cap);
 
-  const matched = applyableJobs(matchJobs(jobs, profile));
-  const results: ApplyOutcome[] = [];
+  const targets = applyableJobs(matchJobs(jobs, prefsOf(profile)));
   let sent = 0, skipped = 0, failed = 0, attempted = 0;
-
-  for (const job of matched) {
+  for (const job of targets) {
     if (sent >= budget) break;
-    if (await hasApplied(job.id)) { skipped++; continue; }
+    if (await hasApplied(sb, userId, job.id)) { skipped++; continue; }
     attempted++;
-    const r = await applyToJob(job.id);
-    results.push(r);
-    if (r.status === "sent") sent++;
-    else if (r.status === "skipped") skipped++;
-    else failed++;
+    const r = await applyToJob(sb, userId, job.id);
+    if (r.status === "sent") sent++; else if (r.status === "skipped") skipped++; else failed++;
   }
-
-  return { attempted, sent, skipped, failed, remainingToday: remaining - sent, results };
+  return { attempted, sent, skipped, failed, remainingToday: Math.max(0, cap - already - sent) };
 }

@@ -7,9 +7,12 @@
 //
 // Writes data/jobs.json (read by the web app) and a per-source CSV snapshot.
 
+import { loadEnv } from "./env.ts";
+loadEnv(); // populate process.env from .env.local before anything reads it
+
 import { crawlWp } from "./wp-client.ts";
 import { SOURCES } from "./sources.ts";
-import { mergeJobsJson, writeCsv, pushToSheet } from "./store.ts";
+import { mergeJobsJson, writeCsv, pushToSheet, upsertSupabase } from "./store.ts";
 import type { NormalizedJob } from "./types.ts";
 
 interface Args { source?: string; pages?: number; }
@@ -56,6 +59,8 @@ async function scrapeSource(sourceId: string, maxPages?: number) {
   console.log(`  ✓ CSV → ${csvPath}`);
   const total = await mergeJobsJson(jobs);
   console.log(`  ✓ data/jobs.json now holds ${total} jobs`);
+  const up = await upsertSupabase(jobs);
+  if (up) console.log(`  ✓ upserted ${up} jobs into Supabase`);
   await pushToSheet(jobs);
   return jobs.length;
 }

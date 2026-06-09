@@ -3,6 +3,7 @@
 // Sheet via an Apps Script webhook.
 
 import { stringify } from "csv-stringify/sync";
+import { createClient } from "@supabase/supabase-js";
 import { readFile, writeFile, mkdir, rename } from "node:fs/promises";
 import path from "node:path";
 import type { NormalizedJob } from "./types.ts";
@@ -73,6 +74,23 @@ export async function writeCsv(jobs: NormalizedJob[], source: string): Promise<s
   const fp = path.join(DATA_DIR, `appyto-${source}.csv`);
   await writeFile(fp, csv, "utf8");
   return fp;
+}
+
+/** Upsert scraped jobs into the Supabase `jobs` table (service role). */
+export async function upsertSupabase(jobs: NormalizedJob[]): Promise<number> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return 0; // Supabase not configured — local CSV/JSON only.
+  const sb = createClient(url, key, { auth: { persistSession: false } });
+  const rows = jobs.map(toAppJob);
+  let written = 0;
+  for (let i = 0; i < rows.length; i += 500) {
+    const slice = rows.slice(i, i + 500);
+    const { error } = await sb.from("jobs").upsert(slice, { onConflict: "id" });
+    if (error) console.error("  ✗ Supabase upsert:", error.message);
+    else written += slice.length;
+  }
+  return written;
 }
 
 export async function pushToSheet(jobs: NormalizedJob[]): Promise<void> {

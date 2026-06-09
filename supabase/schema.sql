@@ -57,6 +57,7 @@ create table if not exists public.profiles (
   plan_id       text not null default 'free' references public.plans(id),
   daily_cap     int not null default 25,
   onboarded     boolean default false,
+  resume        jsonb default '{}',            -- CV builder document
   created_at    timestamptz default now()
 );
 

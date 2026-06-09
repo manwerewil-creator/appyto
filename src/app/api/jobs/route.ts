@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getJobs } from "@/lib/db";
+import { getAuth } from "@/lib/auth";
+import { fetchJobs } from "@/lib/data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  const { sb, user } = await getAuth();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
   const sp = req.nextUrl.searchParams;
   const q = (sp.get("search") ?? "").toLowerCase().trim();
   const category = sp.get("category") ?? "";
@@ -14,10 +18,9 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, Number(sp.get("page") ?? 1));
   const pageSize = Math.min(100, Math.max(1, Number(sp.get("pageSize") ?? 25)));
 
-  let jobs = await getJobs();
+  let jobs = await fetchJobs(sb);
   const total = jobs.length;
 
-  jobs = jobs.filter((j) => j.is_open);
   if (q) {
     jobs = jobs.filter((j) =>
       (j.title + " " + (j.company ?? "") + " " + (j.description ?? "")).toLowerCase().includes(q));

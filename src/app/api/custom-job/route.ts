@@ -1,21 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { upsertJobs } from "@/lib/db";
+import { getAuth } from "@/lib/auth";
+import { upsertJob } from "@/lib/data";
+import { supabaseAdmin } from "@/lib/supabase/server";
 import type { Job } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Save a job the user found themselves (pasted in). It becomes a real job in the
-// store so we can apply to it and log the application like any other.
+// store so we can apply to it and log the application like any other. RLS blocks
+// user writes to jobs, so insert via the service-role client.
 export async function POST(req: NextRequest) {
+  const { user } = await getAuth();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
   const b = await req.json();
   if (!b.apply_email) return NextResponse.json({ ok: false, error: "An employer email is required." }, { status: 400 });
 
-  const uid = `${Date.now().toString(36)}`;
+  const suffix = Date.now().toString(36);
   const job: Job = {
-    id: `custom:${uid}`,
+    id: `custom:${user.id}:${suffix}`,
     source: "custom",
-    source_uid: uid,
+    source_uid: suffix,
     url: b.url || "",
     title: b.title || "Pasted job",
     company: b.company || null,
@@ -32,6 +38,6 @@ export async function POST(req: NextRequest) {
     closes_at: null,
     is_open: true,
   };
-  await upsertJobs([job]);
+  await upsertJob(supabaseAdmin(), job);
   return NextResponse.json({ ok: true, job });
 }
