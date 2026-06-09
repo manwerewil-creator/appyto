@@ -32,11 +32,10 @@ export function GlassSearch({
     <div
       className={cn(
         "lg-glass-input group flex h-12 items-center gap-2 rounded-full pl-4 pr-1.5",
-        "focus-within:ring-2 focus-within:ring-primary/40",
         containerClassName,
       )}
     >
-      <Search className="h-[18px] w-[18px] shrink-0 text-muted-foreground transition-colors group-focus-within:text-primary" />
+      <Search className="h-[18px] w-[18px] shrink-0 text-primary/70 transition-all duration-300 group-focus-within:scale-110 group-focus-within:text-primary" />
       <input
         type="search"
         value={value}
@@ -55,7 +54,7 @@ export function GlassSearch({
           type="button"
           onClick={onSubmit}
           aria-label="Search"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform active:scale-95"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-b from-primary to-primary/85 text-primary-foreground shadow-md shadow-primary/30 transition-all hover:brightness-105 hover:shadow-lg hover:shadow-primary/40 active:scale-95"
         >
           <Search className="h-4 w-4" />
         </button>

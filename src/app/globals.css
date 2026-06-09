@@ -148,41 +148,56 @@ input, select, textarea, button { font-family: inherit; font-size: 15px; }
 
 /* ── Liquid glass ──────────────────────────────────────────────────────────
    Frosted, translucent surfaces (iOS-26 style) used by the mobile bottom nav
-   and the search bars. Backdrop-blur + saturation + a soft inner highlight. */
+   and the search bars. Layered gradient fill + backdrop-blur + saturation +
+   a soft inner top highlight gives the "thick glass" depth. */
 .lg-glass {
-  background: rgba(255, 255, 255, 0.55);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  backdrop-filter: blur(22px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42));
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow:
-    0 8px 32px -8px rgba(16, 24, 40, 0.24),
-    0 2px 8px -2px rgba(16, 24, 40, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    0 14px 44px -12px rgba(16, 24, 40, 0.30),
+    0 4px 14px -6px hsl(var(--sb-primary) / 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.2);
 }
 /* Slightly stronger fill for inputs so placeholder text stays readable. */
 .lg-glass-input {
-  background: rgba(255, 255, 255, 0.45);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.4));
+  -webkit-backdrop-filter: blur(22px) saturate(190%);
+  backdrop-filter: blur(22px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.66);
   box-shadow:
-    0 6px 20px -8px rgba(16, 24, 40, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 8px 26px -10px rgba(16, 24, 40, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: box-shadow .3s cubic-bezier(.2,.8,.2,1), border-color .3s ease, transform .3s cubic-bezier(.2,.8,.2,1);
 }
-/* The animated highlight pill behind the active bottom-nav item. */
+/* Lift + blue glow when the user focuses the search field. */
+.lg-glass-input:focus-within {
+  border-color: hsl(var(--sb-primary) / 0.5);
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 34px -12px hsl(var(--sb-primary) / 0.38),
+    0 0 0 4px hsl(var(--sb-primary) / 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+/* The highlight pill behind the active bottom-nav item — slides between tabs. */
 .lg-pill {
   background: linear-gradient(180deg, hsl(var(--sb-primary) / 0.95), hsl(var(--sb-primary)));
   box-shadow:
-    0 6px 16px -4px hsl(var(--sb-primary) / 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    0 8px 20px -4px hsl(var(--sb-primary) / 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
+/* Springy slide of the active pill from one tab to the next. */
+.lg-slide { transition: transform .5s cubic-bezier(.34, 1.4, .5, 1); }
+.lg-anim  { transition: transform .35s cubic-bezier(.2,.8,.2,1), color .3s ease, opacity .25s ease; }
 /* Respect notches / home indicators on mobile. */
 .safe-bottom { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
 .pb-safe-nav { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 @media (min-width: 1024px) { .pb-safe-nav { padding-bottom: 0; } }
 
-@media (prefers-reduced-motion: no-preference) {
-  .lg-anim { transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .lg-slide, .lg-anim, .lg-glass-input { transition: none; }
 }
 
 /* ── Print (CV download as PDF) ── */

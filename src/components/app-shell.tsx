@@ -94,29 +94,44 @@ function UserFooter() {
 }
 
 // Floating liquid-glass tab bar — mobile + tablet only (hidden ≥ lg).
+// A single highlight pill slides (with a spring) between tabs instead of each
+// item toggling its own background, so switching sections feels continuous.
 function BottomNav() {
   const path = usePathname();
+  const activeIndex = Math.max(0, BOTTOM_NAV.findIndex(({ href }) => isActivePath(path, href)));
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-3 safe-bottom lg:hidden">
-      <nav className="lg-glass pointer-events-auto flex w-full max-w-md items-stretch justify-around gap-1 rounded-[28px] px-2 py-2">
-        {BOTTOM_NAV.map(({ href, label, Icon }) => {
-          const active = isActivePath(path, href);
+      <nav className="lg-glass pointer-events-auto relative flex w-full max-w-md items-stretch rounded-[28px] p-2">
+        {/* Sliding active indicator — width = one slot, translated to the active tab. */}
+        <span
+          aria-hidden
+          className="lg-pill lg-slide absolute inset-y-2 left-2 rounded-[20px]"
+          style={{
+            width: `calc((100% - 1rem) / ${BOTTOM_NAV.length})`,
+            transform: `translateX(${activeIndex * 100}%)`,
+          }}
+        />
+        {BOTTOM_NAV.map(({ href, label, Icon }, i) => {
+          const active = i === activeIndex;
           return (
             <Link
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className="relative flex flex-1 flex-col items-center gap-1 rounded-2xl py-1 text-center"
+              className="relative z-10 flex flex-1 flex-col items-center justify-center gap-1 rounded-[20px] py-2 text-center"
             >
+              <Icon
+                className={cn(
+                  "lg-anim h-[22px] w-[22px]",
+                  active ? "scale-110 text-white" : "text-primary/80",
+                )}
+              />
               <span
                 className={cn(
-                  "lg-anim grid h-9 w-14 place-items-center rounded-full",
-                  active ? "lg-pill text-white" : "text-muted-foreground",
+                  "lg-anim text-[10px] font-semibold leading-none",
+                  active ? "text-white" : "text-muted-foreground",
                 )}
               >
-                <Icon className="h-[22px] w-[22px]" />
-              </span>
-              <span className={cn("text-[10px] font-semibold leading-none", active ? "text-primary" : "text-muted-foreground")}>
                 {label}
               </span>
             </Link>
