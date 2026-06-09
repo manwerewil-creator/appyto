@@ -16,12 +16,18 @@ export default function LoginPage() {
 
   async function signIn() {
     setBusy(true);
-    const sb = createClient();
-    const { error: err } = await sb.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin + "/auth/callback" },
-    });
-    if (err) setBusy(false);
+    setError(null);
+    try {
+      const sb = createClient();
+      const { error: err } = await sb.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin + "/auth/callback" },
+      });
+      if (err) { setError(err.message); setBusy(false); }
+    } catch (e: any) {
+      setError(e?.message ?? "Could not start sign-in.");
+      setBusy(false);
+    }
   }
 
   return (

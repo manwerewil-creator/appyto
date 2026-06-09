@@ -36,6 +36,9 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Run on everything except static assets.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|icon.*\\.svg).*)"],
+  // Run on everything except static assets (incl. image/font files like logo.png,
+  // icon.png — otherwise unauthenticated asset requests get redirected to /login).
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff2?)$).*)",
+  ],
 };
