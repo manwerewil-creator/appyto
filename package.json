@@ -12,7 +12,8 @@
     "scrape": "tsx scripts/scrape/run.ts",
     "scrape:jobszimbabwe": "tsx scripts/scrape/run.ts --source=jobszimbabwe",
     "scrape:applynow": "tsx scripts/scrape/run.ts --source=applynow",
-    "scrape:sample": "tsx scripts/scrape/run.ts --pages=2"
+    "scrape:sample": "tsx scripts/scrape/run.ts --pages=2",
+    "emails:samples": "tsx scripts/email-samples.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.12",

@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { fetchJobById, fetchProfile } from "@/lib/data";
 import { buildEmail } from "@/lib/mailer";
+import { detectRequirements } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Returns the code-generated draft (subject + body) for a job, so the user can
-// edit it before sending. Pure template fill — no AI.
+// Returns the engine-generated draft (subject + body) for a job, plus what the
+// employer was detected to ask for, so the user can review before sending.
+// Pure algorithmic generation — no LLM.
 export async function GET(req: NextRequest) {
   const { sb, user } = await getAuth();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -20,5 +22,6 @@ export async function GET(req: NextRequest) {
   if (!job) return NextResponse.json({ ok: false, error: "job not found" }, { status: 404 });
 
   const { subject, body } = buildEmail(job, profile ?? {});
-  return NextResponse.json({ ok: true, subject, body, to: job.apply_email });
+  const requirements = detectRequirements(job);
+  return NextResponse.json({ ok: true, subject, body, to: job.apply_email, requirements });
 }

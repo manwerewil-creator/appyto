@@ -2,9 +2,10 @@
 // app password. Credentials come from the `send_credentials` row, decrypted.
 
 import nodemailer from "nodemailer";
-import type { Job, ResourceLink } from "./types";
+import type { Job, ResourceLink, ResourceFile } from "./types";
 import type { CredsRow } from "./data";
 import { decrypt } from "./crypto";
+import { composeApplicationEmail } from "./email";
 
 export interface SendConfig {
   method: "smtp" | "google";
@@ -20,14 +21,15 @@ export interface ProfileLike {
   email?: string | null;
   phone?: string | null;
   cover_letter_template?: string | null;
-  resources?: ResourceLink[] | null;   // extra links appended to every application
+  resources?: ResourceLink[] | null;       // extra links appended to every application
+  resource_files?: ResourceFile[] | null;  // extra documents attached to applications
 }
 
 /** Render the user's extra links as a plain-text block, or "" if none. */
 function linksBlock(resources?: ResourceLink[] | null): string {
   const links = (resources ?? []).filter((r) => r?.url);
   if (!links.length) return "";
-  return "\n\n—\n" + links.map((r) => `${r.label || "Link"}: ${r.url}`).join("\n");
+  return "\n\nLinks:\n" + links.map((r) => `${r.label || "Link"}: ${r.url}`).join("\n");
 }
 
 /** Build a usable (decrypted) send config from a credentials row. */
@@ -73,19 +75,27 @@ export async function verifyConfig(c: SendConfig): Promise<{ ok: boolean; error?
 
 export function buildEmail(job: Job, profile: ProfileLike) {
   const name = profile.full_name || "Applicant";
-  const subject = `Application: ${job.title}${job.company ? ` — ${job.company}` : ""}`;
+
+  // If the user wrote their own template, honour it verbatim (their words win).
   const tpl = profile.cover_letter_template?.trim();
-  const body = tpl
-    ? tpl.replaceAll("{title}", job.title).replaceAll("{company}", job.company ?? "your company").replaceAll("{name}", name)
-    : `Dear Hiring Manager,
+  if (tpl) {
+    const subject = `Application for ${job.title}${job.company ? ` at ${job.company}` : ""}`;
+    const body = tpl
+      .replaceAll("{title}", job.title)
+      .replaceAll("{company}", job.company ?? "your company")
+      .replaceAll("{name}", name);
+    return { subject, body };
+  }
 
-I would like to apply for the ${job.title} position${job.company ? ` at ${job.company}` : ""}.
-Please find my CV attached. I believe I am a strong fit and would welcome the
-opportunity to discuss my application.
-
-Kind regards,
-${name}${profile.phone ? `\n${profile.phone}` : ""}${profile.email ? `\n${profile.email}` : ""}`;
-  return { subject, body };
+  // Otherwise use the algorithmic engine: tone + spintax, adapted to the job.
+  const composed = composeApplicationEmail(job, {
+    full_name: profile.full_name,
+    email: profile.email,
+    phone: profile.phone,
+    hasResourceLinks: !!(profile.resources && profile.resources.length),
+    hasResourceFiles: !!(profile.resource_files && profile.resource_files.length),
+  });
+  return { subject: composed.subject, body: composed.body };
 }
 
 export interface Attachment { filename: string; content: Buffer; }

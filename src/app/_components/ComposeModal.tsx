@@ -20,6 +20,7 @@ export default function ComposeModal({
 }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [reqs, setReqs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +28,23 @@ export default function ComposeModal({
   useEffect(() => {
     fetch(`/api/draft?job_id=${encodeURIComponent(job.id)}`)
       .then((r) => r.json())
-      .then((d) => { if (d.ok) { setSubject(d.subject); setBody(d.body); } setLoading(false); })
+      .then((d) => {
+        if (d.ok) {
+          setSubject(d.subject);
+          setBody(d.body);
+          const r = d.requirements ?? {};
+          const labels: string[] = [];
+          if (r.wantsCv) labels.push("CV");
+          if (r.wantsCoverLetter) labels.push("Cover letter");
+          if (r.wantsPortfolio) labels.push("Portfolio / links");
+          if (r.wantsCertificates) labels.push("Certificates");
+          if (r.wantsReferences) labels.push("References");
+          if (r.wantsId) labels.push("ID copy");
+          if (r.referenceCode) labels.push(`Ref: ${r.referenceCode}`);
+          setReqs(labels);
+        }
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [job.id]);
 
@@ -66,6 +83,18 @@ export default function ComposeModal({
               <Label htmlFor="compose-to">To</Label>
               <Input id="compose-to" value={job.apply_email ?? ""} disabled />
             </div>
+            {reqs.length > 0 && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5">
+                <p className="mb-1.5 text-xs font-semibold text-foreground">This employer asked for:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {reqs.map((r) => (
+                    <span key={r} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                      {r}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="compose-subject">Subject</Label>
               <Input
