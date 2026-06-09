@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 import JobBoardCard from "../_components/JobBoardCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,6 +25,9 @@ export default function JobsPage() {
   const [location, setLocation] = useState("");
   const [type, setType] = useState("");
   const [onlyEmail, setOnlyEmail] = useState(false);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [passed, setPassed] = useState<Set<string>>(new Set());
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [facets, setFacets] = useState<{ categories: Facet[]; locations: Facet[]; types: Facet[] }>({
     categories: [], locations: [], types: [],
   });
@@ -44,6 +48,28 @@ export default function JobsPage() {
   useEffect(() => { const t = setTimeout(() => load(1), 250); return () => clearTimeout(t); }, [load]);
 
   const pages = Math.ceil(filtered / 25);
+
+  const applyOne = async (job: Job) => {
+    setApplyingId(job.id);
+    const r = await fetch("/api/apply", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job_id: job.id }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      setAppliedIds((s) => new Set(s).add(job.id));
+      toast.success("Application sent", { description: job.title });
+    } else {
+      toast.error("Could not apply", { description: d.reason ?? "Please try again." });
+    }
+    setApplyingId(null);
+  };
+
+  const passOne = (job: Job) => {
+    setPassed((s) => new Set(s).add(job.id));
+  };
+
+  const visible = items.filter((j) => !passed.has(j.id));
 
   const Dropdown = ({ value, onChange, placeholder, opts }: {
     value: string; onChange: (v: string) => void; placeholder: string; opts: Facet[];
@@ -95,13 +121,22 @@ export default function JobsPage() {
             <Skeleton key={i} className="h-24 w-full rounded-2xl" />
           ))}
         </div>
-      ) : items.length === 0 ? (
+      ) : visible.length === 0 ? (
         <div className="rounded-2xl border bg-muted/30 py-12 text-center text-sm text-muted-foreground">
           No jobs match your filters.
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((j, i) => <JobBoardCard key={j.id} job={j} index={i} />)}
+          {visible.map((j, i) => (
+            <JobBoardCard
+              key={j.id}
+              job={{ ...j, applied: appliedIds.has(j.id) }}
+              index={i}
+              onApply={applyOne}
+              onPass={passOne}
+              applying={applyingId === j.id}
+            />
+          ))}
         </div>
       )}
 

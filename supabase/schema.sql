@@ -100,8 +100,12 @@ create table if not exists public.jobs (
   posted_at     timestamptz,
   closes_at     timestamptz,
   is_open       boolean default true,
+  logo_url      text,                           -- company logo (from employer email domain)
   scraped_at    timestamptz default now()
 );
+
+-- Backfill for existing databases (idempotent).
+alter table public.jobs add column if not exists logo_url text;
 create index if not exists jobs_open_idx on public.jobs (is_open) where is_open;
 create index if not exists jobs_posted_idx on public.jobs (posted_at desc);
 create index if not exists jobs_cat_idx on public.jobs (category);

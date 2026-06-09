@@ -1,34 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import type { Job } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
+import { jobLogo } from "@/lib/logo";
 import { Button } from "@/components/ui/button";
-import { MapPin, ExternalLink, BadgeCheck, Loader2, Mail } from "lucide-react";
+import { MapPin, CalendarDays, Loader2, Heart, X, Briefcase, FileText } from "lucide-react";
 
 export interface JobBoardCardProps {
   job: Job & { score?: number; applied?: boolean };
-  index?: number;                 // drives the rotating tint, like the reference design
+  index?: number;
   onApply?: (job: Job) => void;
+  onPass?: (job: Job) => void;
   applying?: boolean;
 }
 
-// Rotating soft backgrounds so the list reads as colourful rows (matches the
-// reference board). Kept subtle so text stays readable on the light theme.
-const TINTS = [
-  "bg-white",
-  "bg-amber-50/80",
-  "bg-sky-50/80",
-  "bg-emerald-50/70",
-  "bg-violet-50/70",
-  "bg-rose-50/70",
-];
-
-// Deterministic, vivid logo colour from the company name.
+// Deterministic, vivid logo colour for the monogram fallback.
 const LOGO_COLORS = [
   "bg-emerald-600", "bg-sky-600", "bg-violet-600", "bg-rose-600",
   "bg-amber-600", "bg-indigo-600", "bg-teal-600", "bg-fuchsia-600",
 ];
-function logoFor(name: string | null) {
+function monogram(name: string | null) {
   const n = (name || "Job").trim();
   const initials = n.split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "J";
   let h = 0;
@@ -36,112 +27,115 @@ function logoFor(name: string | null) {
   return { initials, color: LOGO_COLORS[h % LOGO_COLORS.length] };
 }
 
-function ago(iso: string | null): string {
-  if (!iso) return "";
+function postedLabel(iso: string | null): string {
+  if (!iso) return "Recently posted";
   const d = Date.now() - new Date(iso).getTime();
-  const h = Math.floor(d / 3600000);
-  if (h < 1) return "just now";
-  if (h < 24) return `${h}h`;
-  const day = Math.floor(h / 24);
-  if (day < 30) return `${day}d`;
-  return `${Math.floor(day / 30)}mo`;
+  const day = Math.floor(d / 86400000);
+  if (day <= 0) return "Posted today";
+  if (day === 1) return "Posted yesterday";
+  if (day < 30) return `Posted ${day} days ago`;
+  return `Posted ${Math.floor(day / 30)}mo ago`;
 }
 
-function isNew(iso: string | null): boolean {
-  if (!iso) return false;
-  return Date.now() - new Date(iso).getTime() < 36 * 3600000; // < ~1.5 days
-}
+export default function JobBoardCard({ job, onApply, onPass, applying }: JobBoardCardProps) {
+  const [passed, setPassed] = useState(false);
+  const [imgOk, setImgOk] = useState(true);
+  const { initials, color } = monogram(job.company);
+  const logo = imgOk ? jobLogo(job) : null;
 
-export default function JobBoardCard({ job, index = 0, onApply, applying }: JobBoardCardProps) {
-  const { initials, color } = logoFor(job.company);
-  const tint = TINTS[index % TINTS.length];
-  const tags = (job.tags ?? []).filter(Boolean).slice(0, 4);
-  const canApply = job.apply_method === "email" && !!job.apply_email;
+  // Pills: job type, then up to 3 tags / category — a clean, branded chip row.
+  const pills = [
+    job.job_type,
+    job.category,
+    ...(job.tags ?? []),
+  ].filter(Boolean).slice(0, 4) as string[];
+
+  const canApply = !!job.apply_email;
+
+  const handlePass = () => { setPassed(true); onPass?.(job); };
+
+  if (passed) return null;
 
   return (
-    <div
-      className={`group relative flex flex-col gap-4 rounded-2xl border border-border/70 ${tint} p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:flex-row sm:items-center sm:gap-5 sm:p-5`}
-    >
-      {/* Logo */}
-      <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-xl ${color} text-lg font-bold text-white shadow-sm`}>
-        {initials}
-      </div>
+    <div className="group overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
+      <div className="p-5">
+        {/* Header */}
+        <div className="flex items-start gap-4">
+          <div className={`grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl ${logo ? "bg-white ring-1 ring-border" : color} text-lg font-bold text-white shadow-sm`}>
+            {logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logo} alt="" width={40} height={40} className="h-9 w-9 object-contain"
+                onError={() => setImgOk(false)} />
+            ) : (
+              initials
+            )}
+          </div>
 
-      {/* Main */}
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noreferrer"
-            className="truncate text-[15px] font-semibold leading-tight hover:underline"
-          >
-            {job.title}
-          </a>
-          {isNew(job.posted_at) && (
-            <span className="rounded-md bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-              New
-            </span>
-          )}
-          {typeof job.score === "number" && (
-            <span title="Match score">
-              <BadgeCheck className="h-4 w-4 text-primary" />
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-lg font-bold leading-tight tracking-tight">{job.title}</h3>
+            <p className="truncate text-sm font-medium text-primary">{job.company ?? "Confidential company"}</p>
+          </div>
+
+          {job.salary && (
+            <span className="shrink-0 rounded-lg bg-emerald-50 px-2.5 py-1 text-sm font-bold text-emerald-700">
+              {job.salary}
             </span>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground/80">{job.company ?? "Company confidential"}</span>
+        {/* Meta */}
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           {job.location && (
-            <span className="inline-flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5" /> {job.location}
-            </span>
+            <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {job.location}</span>
           )}
+          <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-4 w-4" /> {postedLabel(job.posted_at)}</span>
         </div>
 
-        {tags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            {tags.map((t) => (
-              <span key={t} className="rounded-full border border-border bg-background/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                {t}
+        {/* Pills */}
+        {pills.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {pills.map((p, i) => (
+              <span key={`${p}-${i}`} className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground/80">
+                {i === 0 && <Briefcase className="h-3.5 w-3.5" />}
+                {p}
               </span>
             ))}
           </div>
         )}
+
+        {/* About this role */}
+        {job.description && (
+          <div className="mt-4 rounded-xl border border-border/70 bg-muted/30 p-4">
+            <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+              <FileText className="h-4 w-4 text-primary" /> About this role
+            </p>
+            <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
+              {job.description.slice(0, 320)}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Right rail: category + salary + meta */}
-      <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-end">
-        {job.category && (
-          <Badge className="bg-foreground text-background hover:bg-foreground/90 uppercase tracking-wide">
-            {job.category}
-          </Badge>
-        )}
-        {job.salary ? (
-          <span className="text-sm font-bold text-emerald-700">{job.salary}</span>
+      {/* Actions */}
+      <div className="flex items-center justify-between gap-3 border-t border-border/70 bg-muted/20 px-5 py-3">
+        {job.applied ? (
+          <span className="text-sm font-semibold text-emerald-700">Applied ✓</span>
         ) : (
-          <span className="text-xs text-muted-foreground">Salary not stated</span>
+          <Button variant="outline" onClick={handlePass} className="flex-1 sm:flex-none">
+            <X className="h-4 w-4" /> Pass
+          </Button>
         )}
-        <div className="flex items-center gap-2 pt-0.5">
-          {job.posted_at && <span className="text-xs text-muted-foreground">{ago(job.posted_at)}</span>}
-          {onApply ? (
-            job.applied ? (
-              <Badge variant="success">Applied ✓</Badge>
-            ) : (
-              <Button size="sm" disabled={!canApply || applying}
-                title={canApply ? "Send your application by email" : "No email on this posting"}
-                onClick={() => onApply(job)}>
-                {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : canApply ? <><Mail className="h-4 w-4" /> Apply</> : "View"}
-              </Button>
-            )
-          ) : (
-            <Button asChild size="sm" variant="outline">
-              <a href={job.url} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-4 w-4" /> View
-              </a>
-            </Button>
-          )}
-        </div>
+        {!job.applied && (
+          <Button
+            variant="success"
+            className="flex-1 sm:flex-none sm:min-w-[140px]"
+            disabled={!canApply || applying}
+            title={canApply ? "Apply with your profile & CV" : "No application email on this posting yet"}
+            onClick={() => onApply?.(job)}
+          >
+            {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Heart className="h-4 w-4" /> Apply</>}
+          </Button>
+        )}
       </div>
     </div>
   );

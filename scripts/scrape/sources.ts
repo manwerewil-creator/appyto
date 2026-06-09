@@ -20,6 +20,20 @@ import {
 
 type TermBucket = Record<string, string[]>;
 
+// Derive a company logo from the EMPLOYER's email domain only (never the source
+// job board), skipping free mail providers. Falls back to null → UI shows a
+// coloured monogram.
+const FREE_PROVIDERS = new Set([
+  "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk", "ymail.com",
+  "hotmail.com", "outlook.com", "live.com", "msn.com", "aol.com",
+  "icloud.com", "me.com", "proton.me", "protonmail.com", "zoho.com", "mail.com",
+]);
+function logoFromEmail(email: string | null): string | null {
+  const domain = email?.split("@")[1]?.toLowerCase().trim();
+  if (!domain || FREE_PROVIDERS.has(domain)) return null;
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
 function termsByTaxonomy(post: WpPost): TermBucket {
   const out: TermBucket = {};
   const groups = post._embedded?.["wp:term"] ?? [];
@@ -85,6 +99,7 @@ const jobszimbabwe: SourceConfig = {
       posted_at: isoOrNull(post.date_gmt),
       closes_at: closing,
       is_open: closing ? new Date(closing) > new Date() : post.status === "publish",
+      logo_url: logoFromEmail(email),
       raw: post,
     };
   },
@@ -138,6 +153,7 @@ const applynow: SourceConfig = {
       posted_at: isoOrNull(post.date_gmt),
       closes_at: null, // deadline only in free text; left to enrichment
       is_open: post.status === "publish",
+      logo_url: logoFromEmail(email),
       raw: post,
     };
   },

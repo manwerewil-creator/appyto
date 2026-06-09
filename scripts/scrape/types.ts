@@ -22,6 +22,7 @@ export interface NormalizedJob {
   posted_at: string | null;   // ISO
   closes_at: string | null;   // ISO
   is_open: boolean;
+  logo_url: string | null;    // company logo (derived from the employer email domain)
   raw: unknown;
 }
 

@@ -34,6 +34,7 @@ function toAppJob(j: NormalizedJob) {
     posted_at: j.posted_at,
     closes_at: j.closes_at,
     is_open: j.is_open,
+    logo_url: j.logo_url,
   };
 }
 
@@ -59,7 +60,7 @@ export async function mergeJobsJson(jobs: NormalizedJob[]): Promise<number> {
 
 const CSV_COLUMNS = [
   "id", "source", "title", "company", "location", "category", "job_type",
-  "salary", "apply_method", "apply_email", "apply_url", "posted_at",
+  "salary", "apply_method", "apply_email", "apply_url", "logo_url", "posted_at",
   "closes_at", "is_open", "url", "description",
 ];
 
