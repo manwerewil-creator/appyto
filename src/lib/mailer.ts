@@ -2,7 +2,7 @@
 // app password. Credentials come from the `send_credentials` row, decrypted.
 
 import nodemailer from "nodemailer";
-import type { Job } from "./types";
+import type { Job, ResourceLink } from "./types";
 import type { CredsRow } from "./data";
 import { decrypt } from "./crypto";
 
@@ -20,6 +20,14 @@ export interface ProfileLike {
   email?: string | null;
   phone?: string | null;
   cover_letter_template?: string | null;
+  resources?: ResourceLink[] | null;   // extra links appended to every application
+}
+
+/** Render the user's extra links as a plain-text block, or "" if none. */
+function linksBlock(resources?: ResourceLink[] | null): string {
+  const links = (resources ?? []).filter((r) => r?.url);
+  if (!links.length) return "";
+  return "\n\n—\n" + links.map((r) => `${r.label || "Link"}: ${r.url}`).join("\n");
 }
 
 /** Build a usable (decrypted) send config from a credentials row. */
@@ -80,25 +88,33 @@ ${name}${profile.phone ? `\n${profile.phone}` : ""}${profile.email ? `\n${profil
   return { subject, body };
 }
 
+export interface Attachment { filename: string; content: Buffer; }
+
 export interface SendArgs {
   config: SendConfig;
   job: Job;
   profile: ProfileLike;
-  cv?: { filename: string; content: Buffer };
+  cv?: Attachment;
+  attachments?: Attachment[];   // extra resource documents
   override?: { subject?: string; body?: string };
 }
 
-export async function sendApplication({ config, job, profile, cv, override }: SendArgs) {
+export async function sendApplication({ config, job, profile, cv, attachments, override }: SendArgs) {
   if (!job.apply_email) throw new Error("job has no apply email");
   const built = buildEmail(job, profile);
   const subject = override?.subject?.trim() || built.subject;
-  const body = override?.body?.trim() || built.body;
+  // Always append the user's extra links (portfolio, LinkedIn, …) to the body.
+  const body = (override?.body?.trim() || built.body) + linksBlock(profile.resources);
+  const files: Attachment[] = [
+    ...(cv ? [cv] : []),
+    ...(attachments ?? []),
+  ];
   await makeTransport(config).sendMail({
     from: profile.full_name ? `${profile.full_name} <${config.fromEmail}>` : config.fromEmail,
     replyTo: profile.email || undefined,
     to: job.apply_email,
     subject, text: body,
-    attachments: cv ? [{ filename: cv.filename, content: cv.content }] : [],
+    attachments: files.map((f) => ({ filename: f.filename, content: f.content })),
   });
   return { subject, to: job.apply_email };
 }

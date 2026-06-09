@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import JobCard from "../_components/JobCard";
 import ComposeModal, { type ComposeJob } from "../_components/ComposeModal";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -29,7 +30,11 @@ export default function MatchesPage() {
       body: JSON.stringify({ job_id: job.id }),
     });
     const d = await r.json();
-    if (!d.ok) alert(d.reason ?? "Could not apply.");
+    if (!d.ok) {
+      toast.error("Could not apply", { description: d.reason ?? "Please try again." });
+    } else {
+      toast.success("Application sent", { description: job.title });
+    }
     setApplyingId(null);
     load();
   };
@@ -38,8 +43,9 @@ export default function MatchesPage() {
     setAuto({ running: true, msg: "Sending applications…" });
     const r = await fetch("/api/apply/auto", { method: "POST" });
     const d = await r.json();
-    if (!d.ok) { setAuto({ running: false }); alert(d.error ?? "Auto-apply failed."); return; }
+    if (!d.ok) { setAuto({ running: false }); toast.error("Auto-apply failed", { description: d.error ?? "Please try again." }); return; }
     setAuto({ running: false, msg: `Sent ${d.sent}, skipped ${d.skipped}, failed ${d.failed}.` });
+    toast.success("Auto-apply complete", { description: `Sent ${d.sent} · skipped ${d.skipped} · failed ${d.failed}` });
     load();
   };
 

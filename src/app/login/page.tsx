@@ -2,21 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 type Mode = "signin" | "signup";
 
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("signin");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);          // email/password submit
@@ -71,16 +75,22 @@ export default function LoginPage() {
       }
 
       // mode === "signup"
+      const full_name = `${firstName} ${lastName}`.trim();
       const { data, error: err } = await sb.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: window.location.origin + "/auth/callback" },
+        options: {
+          emailRedirectTo: window.location.origin + "/auth/callback",
+          data: full_name ? { full_name } : undefined,
+        },
       });
       if (err) { setError(err.message); setBusy(false); return; }
 
       // If email confirmation is on, there is no active session yet.
       if (!data.session) {
-        setNotice("Account created. Check your inbox to confirm your email, then sign in.");
+        const msg = "Account created. Check your inbox to confirm your email, then sign in.";
+        setNotice(msg);
+        toast.success("Account created", { description: "Check your inbox to confirm your email." });
         setMode("signin");
         setPassword("");
         setBusy(false);
@@ -88,6 +98,7 @@ export default function LoginPage() {
       }
 
       // Confirmation disabled → already signed in.
+      toast.success("Welcome to Featers!");
       router.replace("/auth/callback");
       router.refresh();
     } catch (e: any) {
@@ -128,6 +139,32 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={submit} className="space-y-3">
+            {mode === "signup" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="firstName">First name</Label>
+                  <Input
+                    id="firstName"
+                    autoComplete="given-name"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    disabled={busy}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="lastName">Last name</Label>
+                  <Input
+                    id="lastName"
+                    autoComplete="family-name"
+                    placeholder="Smith"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    disabled={busy}
+                  />
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -143,16 +180,28 @@ export default function LoginPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                placeholder={mode === "signup" ? "At least 6 characters" : "••••••••"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={busy}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                  placeholder={mode === "signup" ? "At least 6 characters" : "••••••••"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={busy}
+                  className="pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? (

@@ -35,6 +35,19 @@ async function getCv(p: ProfileRow | null) {
   return { filename: p.cv_path.split("/").pop() || "cv.pdf", content: Buffer.from(await data.arrayBuffer()) };
 }
 
+// Download the user's extra resource documents to attach alongside the CV.
+async function getResourceFiles(p: ProfileRow | null) {
+  const files = p?.resource_files ?? [];
+  if (!files.length) return [];
+  const store = supabaseAdmin().storage.from("cvs");
+  const out: { filename: string; content: Buffer }[] = [];
+  for (const f of files) {
+    const { data } = await store.download(f.path);
+    if (data) out.push({ filename: f.name, content: Buffer.from(await data.arrayBuffer()) });
+  }
+  return out;
+}
+
 export interface ApplyOutcome { ok: boolean; status: string; reason?: string; }
 
 export async function applyToJob(
@@ -55,8 +68,8 @@ export async function applyToJob(
   }) as { id: string };
 
   try {
-    const cv = await getCv(profile);
-    const { subject } = await sendApplication({ config: credsToConfig(creds!), job, profile: profile ?? {}, cv, override });
+    const [cv, attachments] = await Promise.all([getCv(profile), getResourceFiles(profile)]);
+    const { subject } = await sendApplication({ config: credsToConfig(creds!), job, profile: profile ?? {}, cv, attachments, override });
     await updateApplication(sb, rec.id, { status: "sent", subject, sent_at: new Date().toISOString() });
     return { ok: true, status: "sent" };
   } catch (err: any) {

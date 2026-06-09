@@ -29,6 +29,18 @@ export interface JobPreferences {
   keywords: string[];
 }
 
+/** A labeled link the user wants available on applications (portfolio, LinkedIn, …). */
+export interface ResourceLink {
+  label: string;
+  url: string;
+}
+
+/** An extra document the user uploaded (certificate, reference, transcript, …). */
+export interface ResourceFile {
+  name: string;   // display / original filename
+  path: string;   // Supabase Storage path under the "cvs" bucket
+}
+
 export interface Profile extends JobPreferences {
   full_name: string;
   email: string;
@@ -39,6 +51,8 @@ export interface Profile extends JobPreferences {
   cover_letter_template: string;  // the user's own custom email template
   daily_cap: number;              // safety limit on auto-applies per day
   onboarded: boolean;
+  resources: ResourceLink[];      // extra links relevant to applications
+  resource_files: ResourceFile[]; // extra uploaded documents
 }
 
 export interface Settings {
@@ -84,6 +98,8 @@ export const DEFAULT_PROFILE: Profile = {
   cover_letter_template: "",
   daily_cap: 25,
   onboarded: false,
+  resources: [],
+  resource_files: [],
   desired_titles: [],
   desired_categories: [],
   desired_locations: [],

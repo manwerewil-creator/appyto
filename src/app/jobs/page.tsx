@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import JobCard from "../_components/JobCard";
-import { Card, CardContent } from "@/components/ui/card";
+import JobBoardCard from "../_components/JobBoardCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import type { Job } from "@/lib/types";
 
 interface Facet { value: string; n: number; }
 
+// Pill-style dropdown to mirror the reference board's filter chips.
 const selectClass =
-  "flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-11 appearance-none rounded-full border border-border bg-white pl-4 pr-9 text-sm font-medium shadow-sm transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export default function JobsPage() {
   const [items, setItems] = useState<Job[]>([]);
@@ -45,65 +45,66 @@ export default function JobsPage() {
 
   const pages = Math.ceil(filtered / 25);
 
+  const Dropdown = ({ value, onChange, placeholder, opts }: {
+    value: string; onChange: (v: string) => void; placeholder: string; opts: Facet[];
+  }) => (
+    <div className="relative">
+      <select className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{placeholder}</option>
+        {opts.map((f) => <option key={f.value} value={f.value}>{f.value} ({f.n})</option>)}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    </div>
+  );
+
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">All Jobs</h1>
-        <p className="text-sm text-muted-foreground">{filtered.toLocaleString()} open jobs</p>
+        <h1 className="text-3xl font-extrabold tracking-tight">Jobs in Zimbabwe</h1>
+        <p className="text-sm text-muted-foreground">
+          Browse all {filtered.toLocaleString()} open jobs.
+        </p>
       </div>
 
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="relative sm:col-span-2 lg:col-span-1 lg:row-span-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                placeholder="Search title, company, description…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <select className={selectClass} value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All categories</option>
-              {facets.categories.map((f) => <option key={f.value} value={f.value}>{f.value} ({f.n})</option>)}
-            </select>
-            <select className={selectClass} value={location} onChange={(e) => setLocation(e.target.value)}>
-              <option value="">All locations</option>
-              {facets.locations.map((f) => <option key={f.value} value={f.value}>{f.value} ({f.n})</option>)}
-            </select>
-            <select className={selectClass} value={type} onChange={(e) => setType(e.target.value)}>
-              <option value="">All types</option>
-              {facets.types.map((f) => <option key={f.value} value={f.value}>{f.value} ({f.n})</option>)}
-            </select>
-          </div>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-input accent-primary"
-              checked={onlyEmail}
-              onChange={(e) => setOnlyEmail(e.target.checked)}
-            />
-            Only jobs I can apply to by email
-          </label>
-        </CardContent>
-      </Card>
+      {/* Search + filter pills */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[240px] flex-1">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="h-11 rounded-full border-border pl-11 shadow-sm"
+            placeholder="Search job title, skill, company"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <Dropdown value={location} onChange={setLocation} placeholder="Location" opts={facets.locations} />
+        <Dropdown value={category} onChange={setCategory} placeholder="Category" opts={facets.categories} />
+        <Dropdown value={type} onChange={setType} placeholder="Type" opts={facets.types} />
+      </div>
+
+      <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-input accent-primary"
+          checked={onlyEmail}
+          onChange={(e) => setOnlyEmail(e.target.checked)}
+        />
+        Only jobs I can apply to by email
+      </label>
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 w-full rounded-xl" />
+            <Skeleton key={i} className="h-24 w-full rounded-2xl" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            No jobs match your filters.
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border bg-muted/30 py-12 text-center text-sm text-muted-foreground">
+          No jobs match your filters.
+        </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {items.map((j) => <JobCard key={j.id} job={j} />)}
+        <div className="space-y-3">
+          {items.map((j, i) => <JobBoardCard key={j.id} job={j} index={i} />)}
         </div>
       )}
 

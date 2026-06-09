@@ -58,8 +58,14 @@ create table if not exists public.profiles (
   daily_cap     int not null default 25,
   onboarded     boolean default false,
   resume        jsonb default '{}',            -- CV builder document
+  resources     jsonb default '[]',            -- extra application links: [{label,url}]
+  resource_files jsonb default '[]',           -- extra uploaded docs: [{name,path}]
   created_at    timestamptz default now()
 );
+
+-- Backfill for existing databases (idempotent).
+alter table public.profiles add column if not exists resources jsonb default '[]';
+alter table public.profiles add column if not exists resource_files jsonb default '[]';
 
 -- Per-user sending method (Google OAuth tokens OR SMTP app password), encrypted.
 create table if not exists public.send_credentials (

@@ -31,6 +31,8 @@ export async function GET() {
     daily_cap: p?.daily_cap ?? 0,
     onboarded: p?.onboarded ?? false,
     cv_filename: cv_path ? cv_path.split("/").pop() : null,
+    resources: p?.resources ?? [],
+    resource_files: p?.resource_files ?? [],
   });
 }
 
@@ -52,6 +54,16 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(body[k])) {
       patch[k] = (body[k] as unknown[]).map((s) => String(s).trim()).filter(Boolean);
     }
+  }
+
+  // Extra application links: sanitize to [{label,url}] with non-empty URLs.
+  if (Array.isArray(body.resources)) {
+    patch.resources = (body.resources as unknown[])
+      .map((r) => {
+        const o = (r ?? {}) as Record<string, unknown>;
+        return { label: String(o.label ?? "").trim(), url: String(o.url ?? "").trim() };
+      })
+      .filter((r) => r.url);
   }
 
   const profile = await saveProfile(sb, user.id, patch);

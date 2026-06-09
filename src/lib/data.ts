@@ -3,7 +3,7 @@
 // — RLS enforces ownership — or supabaseAdmin() for cross-user/system writes.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Job } from "./types";
+import type { Job, ResourceLink, ResourceFile } from "./types";
 import type { Resume } from "./resume";
 import { DEFAULT_RESUME } from "./resume";
 
@@ -31,6 +31,7 @@ export interface ProfileRow {
   desired_categories: string[]; desired_locations: string[]; desired_job_types: string[];
   keywords: string[]; cv_path: string | null; cover_letter_template: string | null;
   plan_id: string; daily_cap: number; onboarded: boolean; resume: Resume | null;
+  resources: ResourceLink[] | null; resource_files: ResourceFile[] | null;
 }
 export async function fetchProfile(sb: SB, userId: string): Promise<ProfileRow | null> {
   const { data } = await sb.from("profiles").select("*").eq("id", userId).maybeSingle();
