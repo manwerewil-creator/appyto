@@ -26,8 +26,8 @@ export default function LoginPage() {
     <div className={styles.wrap}>
       <div className={`card ${styles.box}`}>
         <div className={styles.brand}>
-          <span className={styles.dot} />
-          Appyto
+          <img src="/logo.png" alt="" width={34} height={34} style={{ borderRadius: 8, display: "block" }} />
+          Featers
         </div>
         <p className={styles.tag}>
           A tool to apply faster — not a guarantee of a job.

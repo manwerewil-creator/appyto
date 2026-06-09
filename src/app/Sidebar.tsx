@@ -41,8 +41,8 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="brand">
-        <span className="dot" />
-        Appyto
+        <img src="/logo.png" alt="" width={26} height={26} style={{ borderRadius: 7, display: "block" }} />
+        Featers
       </div>
       {NAV.map((n) => (
         <Link

@@ -1,6 +1,6 @@
 {
-  "name": "Appyto — Apply to jobs faster",
-  "short_name": "Appyto",
+  "name": "Featers — Apply to jobs faster",
+  "short_name": "Featers",
   "description": "Aggregates every job in Zimbabwe, matches them to you with code, and applies on your behalf.",
   "start_url": "/",
   "scope": "/",
@@ -9,7 +9,7 @@
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    { "src": "/logo.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "256x256", "type": "image/png", "purpose": "maskable" }
   ]
 }

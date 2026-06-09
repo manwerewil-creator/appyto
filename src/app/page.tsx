@@ -74,11 +74,11 @@ export default function Overview() {
               </div>
 
               <div className="card">
-                <h3 style={{ marginTop: 0 }}>How Appyto works</h3>
+                <h3 style={{ marginTop: 0 }}>How Featers works</h3>
                 <ol className="muted" style={{ paddingLeft: 18, lineHeight: 1.9, margin: 0 }}>
                   <li>Scrapers pull every job from Jobs Zimbabwe + ApplyNOW.</li>
                   <li>Pure code (no AI) ranks them against your profile.</li>
-                  <li>Appyto emails your CV to employers — from your own inbox.</li>
+                  <li>Featers emails your CV to employers — from your own inbox.</li>
                 </ol>
                 <p className="muted" style={{ fontSize: 12.5, marginBottom: 0 }}>
                   A tool to apply faster — not a guarantee of a job.

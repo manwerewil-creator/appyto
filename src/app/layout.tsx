@@ -12,10 +12,11 @@ const interTight = Inter_Tight({
 });
 
 export const metadata: Metadata = {
-  title: "Appyto",
+  title: "Featers",
   description: "Aggregate every job in Zimbabwe, match with code, and apply for you.",
   manifest: "/manifest.json",
-  appleWebApp: { capable: true, title: "Appyto", statusBarStyle: "default" },
+  icons: { icon: "/icon.png", apple: "/apple-icon.png" },
+  appleWebApp: { capable: true, title: "Featers", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

@@ -41,7 +41,7 @@ export async function createPayment(a: CreatePaymentArgs): Promise<{ redirectUrl
     id,
     reference: a.reference,
     amount: a.amountUsd.toFixed(2),
-    additionalinfo: `Appyto subscription ${a.reference}`,
+    additionalinfo: `Featers subscription ${a.reference}`,
     returnurl: a.returnUrl,
     resulturl: a.resultUrl,
     authemail: a.authEmail,

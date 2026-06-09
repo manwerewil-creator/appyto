@@ -10,10 +10,10 @@ interface SettingsView {
 }
 
 const GOOGLE_MSG: Record<string, { ok: boolean; text: string }> = {
-  connected: { ok: true, text: "Gmail connected! Appyto can now send applications from your inbox." },
+  connected: { ok: true, text: "Gmail connected! Featers can now send applications from your inbox." },
   notconfigured: { ok: false, text: "Google isn't configured on this server yet — set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in your env." },
   denied: { ok: false, text: "You declined the Google permission. Connect again to enable sending." },
-  norefresh: { ok: false, text: "Google didn't return a refresh token. Remove Appyto from your Google account permissions and reconnect." },
+  norefresh: { ok: false, text: "Google didn't return a refresh token. Remove Featers from your Google account permissions and reconnect." },
   error: { ok: false, text: "Something went wrong connecting Gmail. Try again." },
 };
 
@@ -52,7 +52,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" subtitle="Connect the inbox Appyto sends applications from"
+      <PageHeader title="Settings" subtitle="Connect the inbox Featers sends applications from"
         right={ready ? <span className="badge sent">Email connected ✓</span> : <span className="badge skipped">Not connected</span>} />
       <div className="content grid" style={{ gap: 18, maxWidth: 680 }}>
         {msg && (
@@ -66,7 +66,7 @@ export default function SettingsPage() {
             {s.auth_method === "google" && s.google_connected && <span className="badge sent">Active</span>}
           </div>
           <p className="muted" style={{ margin: 0, fontSize: 13.5 }}>
-            Sign in with Google and grant “send email”. No password stored — Appyto sends via a secure token.
+            Sign in with Google and grant “send email”. No password stored — Featers sends via a secure token.
           </p>
           {s.google_connected ? (
             <div className="row" style={{ gap: 10 }}>
