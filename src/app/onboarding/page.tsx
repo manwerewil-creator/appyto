@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import PageHeader from "../_components/PageHeader";
 import ChipsInput from "../_components/ChipsInput";
 import type { Profile } from "@/lib/types";
-import o from "./onboarding.module.css";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { ArrowRight, ChevronLeft, Check, Mail, Sparkles } from "lucide-react";
 
 const STEPS = ["About you", "What you do", "Where & how", "Sending email", "Done"];
 const WORK_MODES = ["On-site (Zimbabwe)", "Remote", "Freelance", "Hybrid"];
@@ -25,7 +30,27 @@ export default function Onboarding() {
       setEmailReady(s.auth_method === "google" ? s.google_connected : s.smtp_verified));
   }, []);
 
-  if (!p) return <><PageHeader title="Get started" /><div className="content"><div className="empty">Loading…</div></div></>;
+  if (!p) {
+    return (
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Get started</h1>
+          <p className="text-sm text-muted-foreground">A few questions so we can find and apply to the right jobs</p>
+        </div>
+        <div className="mx-auto w-full max-w-2xl space-y-4">
+          <Skeleton className="h-2 w-full rounded-full" />
+          <Card>
+            <CardContent className="space-y-4 p-5">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-4 w-64" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => setP({ ...p, [k]: v });
   const toggle = (key: "work_modes" | "desired_job_types", val: string) => {
@@ -45,100 +70,170 @@ export default function Onboarding() {
     setStep(step + 1);
   };
 
-  const Pill = ({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) => (
-    <button type="button" className={`${o.pill} ${active ? o.pillOn : ""}`} onClick={onClick}>{children}</button>
+  const Toggle = ({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) => (
+    <Button type="button" size="sm" variant={active ? "default" : "outline"} onClick={onClick}>
+      {active && <Check className="h-3.5 w-3.5" />}
+      {children}
+    </Button>
   );
 
+  const progress = ((step + 1) / STEPS.length) * 100;
+
   return (
-    <>
-      <PageHeader title="Get started" subtitle="A few questions so we can find and apply to the right jobs" />
-      <div className="content">
-        <div className={o.wrap}>
-          <div className={o.steps}>{STEPS.map((_, i) => <div key={i} className={`${o.bar} ${i <= step ? o.barOn : ""}`} />)}</div>
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Get started</h1>
+        <p className="text-sm text-muted-foreground">A few questions so we can find and apply to the right jobs</p>
+      </div>
 
-          <div className="card">
-            {step === 0 && (
-              <>
-                <h2 className={o.h}>About you</h2>
-                <p className={o.sub}>How employers will see and contact you.</p>
-                <div className="grid" style={{ gap: 12 }}>
-                  <div className="col"><label className="label">Full name</label><input className="input" value={p.full_name} onChange={(e) => set("full_name", e.target.value)} /></div>
-                  <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div className="col"><label className="label">Email</label><input className="input" value={p.email} onChange={(e) => set("email", e.target.value)} /></div>
-                    <div className="col"><label className="label">Phone</label><input className="input" value={p.phone} onChange={(e) => set("phone", e.target.value)} /></div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {step === 1 && (
-              <>
-                <h2 className={o.h}>What you do</h2>
-                <p className={o.sub}>Your qualifications and the roles you want.</p>
-                <div className="grid" style={{ gap: 14 }}>
-                  <div className="col"><label className="label">Qualifications & experience</label>
-                    <textarea className="textarea" rows={3} placeholder="e.g. BAcc, ACCA part-qualified, 5 years in audit" value={p.qualifications} onChange={(e) => set("qualifications", e.target.value)} /></div>
-                  <div className="col"><label className="label">Roles / titles you want</label>
-                    <ChipsInput values={p.desired_titles} onChange={(v) => set("desired_titles", v)} placeholder="e.g. Accountant, Auditor" /></div>
-                  <div className="col"><label className="label">Industries / categories</label>
-                    <ChipsInput values={p.desired_categories} onChange={(v) => set("desired_categories", v)} placeholder="e.g. Finance, NGO" /></div>
-                  <div className="col"><label className="label">Keywords (skills, tools)</label>
-                    <ChipsInput values={p.keywords} onChange={(v) => set("keywords", v)} placeholder="e.g. Pastel, SAP, payroll" /></div>
-                </div>
-              </>
-            )}
-
-            {step === 2 && (
-              <>
-                <h2 className={o.h}>Where & how</h2>
-                <p className={o.sub}>What kind of work setup are you after?</p>
-                <div className="grid" style={{ gap: 16 }}>
-                  <div><label className="label">Work mode</label>
-                    <div className={o.pills} style={{ marginTop: 8 }}>{WORK_MODES.map((m) => <Pill key={m} active={p.work_modes.includes(m)} onClick={() => toggle("work_modes", m)}>{m}</Pill>)}</div></div>
-                  <div><label className="label">Job type</label>
-                    <div className={o.pills} style={{ marginTop: 8 }}>{TYPES.map((m) => <Pill key={m} active={p.desired_job_types.includes(m)} onClick={() => toggle("desired_job_types", m)}>{m}</Pill>)}</div></div>
-                  <div className="col"><label className="label">Preferred locations (leave empty for anywhere)</label>
-                    <ChipsInput values={p.desired_locations} onChange={(v) => set("desired_locations", v)} suggestions={LOCATIONS} placeholder="e.g. Harare" /></div>
-                </div>
-              </>
-            )}
-
-            {step === 3 && (
-              <>
-                <h2 className={o.h}>Sending email</h2>
-                <p className={o.sub}>Applications send from your own inbox. Connect it once.</p>
-                {emailReady
-                  ? <div className="card" style={{ background: "var(--green-soft)", borderColor: "#cdebd6", color: "var(--green)" }}>Your email is connected ✓</div>
-                  : <div className="grid" style={{ gap: 12 }}>
-                      <div className="card" style={{ background: "var(--bg-soft)" }}>Not connected yet. You can do this now or later — auto-apply needs it.</div>
-                      <a className="btn" href="/settings">Connect my email →</a>
-                    </div>}
-              </>
-            )}
-
-            {step === 4 && (
-              <div style={{ textAlign: "center", padding: "20px 0" }}>
-                <div style={{ fontSize: 46 }}>🎉</div>
-                <h2 className={o.h}>You’re all set, {p.full_name || "there"}!</h2>
-                <p className={o.sub}>{matchCount !== null
-                  ? <>We found <b style={{ color: "var(--brand)" }}>{matchCount.toLocaleString()}</b> jobs in Zimbabwe that match you.</>
-                  : "Your profile is ready."}</p>
-                <div className="row" style={{ justifyContent: "center", gap: 10 }}>
-                  <button className="btn" onClick={() => router.push("/matches")}>View my matches →</button>
-                  <button className="btn ghost" onClick={() => router.push("/resume")}>Build my CV</button>
-                </div>
-              </div>
-            )}
-
-            {step < 4 && (
-              <div className={o.nav}>
-                <button className="btn ghost" disabled={step === 0} onClick={() => setStep(step - 1)}>← Back</button>
-                <button className="btn" onClick={next}>{step === 3 ? "Finish" : "Next →"}</button>
-              </div>
-            )}
+      <div className="mx-auto w-full max-w-2xl space-y-5">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <span>{STEPS[step]}</span>
+            <span>Step {Math.min(step + 1, STEPS.length)} of {STEPS.length}</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         </div>
+
+        {step === 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>About you</CardTitle>
+              <CardDescription>How employers will see and contact you.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="full_name">Full name</Label>
+                <Input id="full_name" value={p.full_name} onChange={(e) => set("full_name", e.target.value)} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" value={p.email} onChange={(e) => set("email", e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" value={p.phone} onChange={(e) => set("phone", e.target.value)} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>What you do</CardTitle>
+              <CardDescription>Your qualifications and the roles you want.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="qualifications">Qualifications &amp; experience</Label>
+                <Textarea id="qualifications" rows={3} placeholder="e.g. BAcc, ACCA part-qualified, 5 years in audit" value={p.qualifications} onChange={(e) => set("qualifications", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Roles / titles you want</Label>
+                <ChipsInput values={p.desired_titles} onChange={(v) => set("desired_titles", v)} placeholder="e.g. Accountant, Auditor" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Industries / categories</Label>
+                <ChipsInput values={p.desired_categories} onChange={(v) => set("desired_categories", v)} placeholder="e.g. Finance, NGO" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Keywords (skills, tools)</Label>
+                <ChipsInput values={p.keywords} onChange={(v) => set("keywords", v)} placeholder="e.g. Pastel, SAP, payroll" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 2 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Where &amp; how</CardTitle>
+              <CardDescription>What kind of work setup are you after?</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="space-y-2">
+                <Label>Work mode</Label>
+                <div className="flex flex-wrap gap-2">
+                  {WORK_MODES.map((m) => <Toggle key={m} active={p.work_modes.includes(m)} onClick={() => toggle("work_modes", m)}>{m}</Toggle>)}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Job type</Label>
+                <div className="flex flex-wrap gap-2">
+                  {TYPES.map((m) => <Toggle key={m} active={p.desired_job_types.includes(m)} onClick={() => toggle("desired_job_types", m)}>{m}</Toggle>)}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Preferred locations (leave empty for anywhere)</Label>
+                <ChipsInput values={p.desired_locations} onChange={(v) => set("desired_locations", v)} suggestions={LOCATIONS} placeholder="e.g. Harare" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 3 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sending email</CardTitle>
+              <CardDescription>Applications send from your own inbox. Connect it once.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {emailReady ? (
+                <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success">
+                  <Check className="h-4 w-4" /> Your email is connected
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="rounded-lg border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+                    Not connected yet. You can do this now or later — auto-apply needs it.
+                  </div>
+                  <Button asChild variant="outline">
+                    <a href="/settings"><Mail className="h-4 w-4" /> Connect my email <ArrowRight className="h-4 w-4" /></a>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 4 && (
+          <Card>
+            <CardContent className="space-y-4 py-8 text-center">
+              <div className="text-5xl">🎉</div>
+              <div className="space-y-1">
+                <h2 className="text-xl font-bold tracking-tight">You&rsquo;re all set, {p.full_name || "there"}!</h2>
+                <p className="text-sm text-muted-foreground">
+                  {matchCount !== null
+                    ? <>We found <b className="text-primary">{matchCount.toLocaleString()}</b> jobs in Zimbabwe that match you.</>
+                    : "Your profile is ready."}
+                </p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2 pt-2">
+                <Button onClick={() => router.push("/matches")}>
+                  <Sparkles className="h-4 w-4" /> View my matches <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" onClick={() => router.push("/resume")}>Build my CV</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {step < 4 && (
+          <div className="flex items-center justify-between gap-3">
+            <Button variant="ghost" disabled={step === 0} onClick={() => setStep(step - 1)}>
+              <ChevronLeft className="h-4 w-4" /> Back
+            </Button>
+            <Button onClick={next}>
+              {step === 3 ? "Finish" : "Next"} <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }

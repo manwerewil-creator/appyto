@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import PageHeader from "../_components/PageHeader";
 import ComposeModal, { type ComposeJob } from "../_components/ComposeModal";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Send, Check } from "lucide-react";
 
 export default function QuickApply() {
   const [f, setF] = useState({ title: "", company: "", apply_email: "", location: "", description: "" });
@@ -27,34 +31,65 @@ export default function QuickApply() {
   };
 
   return (
-    <>
-      <PageHeader title="Quick Apply" subtitle="Found a job elsewhere? Paste it and apply in one place." />
-      <div className="content" style={{ maxWidth: 720 }}>
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Quick Apply</h1>
+        <p className="text-sm text-muted-foreground">Found a job elsewhere? Paste it and apply in one place.</p>
+      </div>
+
+      <div className="mx-auto w-full max-w-2xl space-y-4">
         {done && (
-          <div className="card" style={{ background: "var(--green-soft)", borderColor: "#cdebd6", color: "var(--green)", marginBottom: 16 }}>
-            Application sent ✓ It’s logged under Applications. <a href="/applications" style={{ textDecoration: "underline" }}>View</a>
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success">
+            <Check className="h-4 w-4" /> Application sent — it&rsquo;s logged under Applications.
+            <a href="/applications" className="underline underline-offset-2">View</a>
           </div>
         )}
-        <div className="card grid" style={{ gap: 14 }}>
-          <p className="muted" style={{ margin: 0 }}>
-            Paste a job you found (on WhatsApp, LinkedIn, a newspaper, anywhere). Tell us the employer’s email and
-            what the job is — we’ll draft a response you can edit, then send it from your connected inbox.
-          </p>
-          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div className="col"><label className="label">Job title</label><input className="input" value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. Accounts Clerk" /></div>
-            <div className="col"><label className="label">Company</label><input className="input" value={f.company} onChange={(e) => set("company", e.target.value)} placeholder="e.g. Delta Corp" /></div>
-          </div>
-          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div className="col"><label className="label">Employer email *</label><input className="input" value={f.apply_email} onChange={(e) => set("apply_email", e.target.value)} placeholder="hr@company.co.zw" /></div>
-            <div className="col"><label className="label">Location</label><input className="input" value={f.location} onChange={(e) => set("location", e.target.value)} placeholder="Harare" /></div>
-          </div>
-          <div className="col"><label className="label">Job details / the advert text (optional)</label>
-            <textarea className="textarea" rows={5} value={f.description} onChange={(e) => set("description", e.target.value)} placeholder="Paste the job description or the email you received…" /></div>
-          {error && <div className="card" style={{ background: "var(--red-soft)", borderColor: "#f3c9c9", color: "var(--red)" }}>{error}</div>}
-          <div className="row" style={{ justifyContent: "flex-end" }}>
-            <button className="btn" onClick={draft} disabled={creating}>{creating ? <span className="spinner" /> : "Draft my response →"}</button>
-          </div>
-        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Paste a job</CardTitle>
+            <CardDescription>
+              Paste a job you found (on WhatsApp, LinkedIn, a newspaper, anywhere). Tell us the employer&rsquo;s email and
+              what the job is — we&rsquo;ll draft a response you can edit, then send it from your connected inbox.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="title">Job title</Label>
+                <Input id="title" value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. Accounts Clerk" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="company">Company</Label>
+                <Input id="company" value={f.company} onChange={(e) => set("company", e.target.value)} placeholder="e.g. Delta Corp" />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="apply_email">Employer email *</Label>
+                <Input id="apply_email" value={f.apply_email} onChange={(e) => set("apply_email", e.target.value)} placeholder="hr@company.co.zw" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="location">Location</Label>
+                <Input id="location" value={f.location} onChange={(e) => set("location", e.target.value)} placeholder="Harare" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="description">Job details / the advert text (optional)</Label>
+              <Textarea id="description" rows={5} value={f.description} onChange={(e) => set("description", e.target.value)} placeholder="Paste the job description or the email you received…" />
+            </div>
+            {error && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+                {error}
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button onClick={draft} disabled={creating}>
+                {creating ? <><Loader2 className="h-4 w-4 animate-spin" /> Drafting…</> : <><Send className="h-4 w-4" /> Draft my response</>}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {composeJob && (
@@ -64,6 +99,6 @@ export default function QuickApply() {
           onSent={() => { setComposeJob(null); setDone(true); setF({ title: "", company: "", apply_email: "", location: "", description: "" }); }}
         />
       )}
-    </>
+    </div>
   );
 }

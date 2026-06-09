@@ -1,15 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import PageHeader from "../_components/PageHeader";
 import ResumeSheet from "./Templates";
 import { TEMPLATES, SAMPLE_RESUME, type Resume, type Experience, type Education, type Skill } from "@/lib/resume";
 import b from "./builder.module.css";
+import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import {
+  Download,
+  Plus,
+  X,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ImagePlus,
+} from "lucide-react";
 
 const STEPS = ["Personal", "Experience", "Education", "Skills", "Summary", "Review"];
 const ACCENTS = ["#2563eb", "#0f766e", "#b45309", "#9333ea", "#dc2626", "#111827"];
 const blankExp = (): Experience => ({ role: "", company: "", location: "", start: "", end: "", bullets: [] });
 const blankEdu = (): Education => ({ degree: "", institution: "", location: "", start: "", end: "" });
+
+const selectClass =
+  "flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export default function ResumeBuilder() {
   const [r, setR] = useState<Resume | null>(null);
@@ -31,7 +47,14 @@ export default function ResumeBuilder() {
     return () => clearTimeout(t.current);
   }, [r]);
 
-  if (!r) return <><PageHeader title="CV Builder" /><div className="content"><div className="empty">Loading…</div></div></>;
+  if (!r) return (
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">CV Builder</h1>
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    </div>
+  );
 
   const set = <K extends keyof Resume>(k: K, v: Resume[K]) => setR({ ...r, [k]: v });
   const importProfile = async () => {
@@ -43,169 +66,274 @@ export default function ResumeBuilder() {
   const photo = (file: File) => { const fr = new FileReader(); fr.onload = () => set("photo", String(fr.result)); fr.readAsDataURL(file); };
 
   const field = (label: string, k: keyof Resume, ph?: string) => (
-    <div className="col" key={k}><label className="label">{label}</label>
-      <input className="input" placeholder={ph} value={r[k] as string} onChange={(e) => set(k, e.target.value as any)} /></div>
+    <div className="space-y-1.5" key={k}>
+      <Label>{label}</Label>
+      <Input placeholder={ph} value={r[k] as string} onChange={(e) => set(k, e.target.value as any)} />
+    </div>
   );
 
   return (
-    <>
-      <PageHeader title="CV Builder" subtitle="Build a professional CV from code — no templates to buy"
-        right={<>
-          <span className="muted no-print" style={{ fontSize: 13 }}>{saved ? "Saved ✓" : "Saving…"}</span>
-          <button className="btn" onClick={() => window.print()}>⬇ Download PDF</button>
-        </>} />
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between no-print">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">CV Builder</h1>
+          <p className="text-sm text-muted-foreground">Build a professional CV from code — no templates to buy</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm text-muted-foreground">{saved ? "Saved ✓" : "Saving…"}</span>
+          <Button onClick={() => window.print()}>
+            <Download className="h-4 w-4" /> Download PDF
+          </Button>
+        </div>
+      </div>
 
-      <div className="content no-print">
-        <div className={b.stepper}>
-          {STEPS.map((label, i) => (
-            <div key={label} className={`${b.step} ${i === step ? b.stepActive : ""} ${i < step ? b.stepDone : ""}`} onClick={() => setStep(i)}>
-              <span className={b.stepNum}>{i < step ? "✓" : i + 1}</span>{label}
-            </div>
-          ))}
+      <div className="no-print">
+        {/* Step pills */}
+        <div className="flex flex-wrap gap-2">
+          {STEPS.map((label, i) => {
+            const active = i === step;
+            const done = i < step;
+            return (
+              <button
+                key={label}
+                onClick={() => setStep(i)}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                  active && "border-primary bg-primary text-primary-foreground",
+                  done && !active && "border-primary/40 bg-primary/10 text-primary",
+                  !active && !done && "border-input bg-background text-muted-foreground hover:bg-accent",
+                )}
+              >
+                <span
+                  className={cn(
+                    "inline-flex h-5 w-5 items-center justify-center rounded-full text-xs",
+                    active ? "bg-primary-foreground/20" : done ? "bg-primary/20" : "bg-muted",
+                  )}
+                >
+                  {done ? <Check className="h-3 w-3" /> : i + 1}
+                </span>
+                {label}
+              </button>
+            );
+          })}
         </div>
 
-        <div className={b.layout}>
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_minmax(0,420px)]">
           {/* ── Form column ── */}
-          <div className={b.form}>
+          <div className="space-y-4">
             {step === 0 && (
-              <div className="card">
-                <div className={b.formCard}>
-                  <div className="spread"><h2 className={b.h}>Personal info</h2>
-                    <div className="row" style={{ gap: 8 }}>
-                      <button className="btn ghost sm" onClick={importProfile}>Import from profile</button>
-                      <button className="btn ghost sm" onClick={loadSample}>Load sample</button>
+              <Card>
+                <CardContent className="space-y-4 pt-6">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 className="text-lg font-semibold">Personal info</h2>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" onClick={importProfile}>Import from profile</Button>
+                      <Button variant="outline" size="sm" onClick={loadSample}>Load sample</Button>
                     </div>
                   </div>
-                  <p className={b.sub}>Up-to-date details employers use to contact you.</p>
-                  <div className="row" style={{ gap: 14, alignItems: "flex-start" }}>
-                    <div style={{ flex: 1 }} className={b.formCard}>
+                  <p className="text-sm text-muted-foreground">Up-to-date details employers use to contact you.</p>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                    <div className="flex-1 space-y-4">
                       {field("Full name", "full_name", "e.g. Taylor Parker")}
                       {field("Professional headline", "headline", "e.g. Senior Accountant")}
                     </div>
-                    <label className={b.photoBox}>
-                      {r.photo ? <img src={r.photo} alt="" /> : <span>Photo<br />(optional)</span>}
+                    <label className="flex h-28 w-28 shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-md border border-dashed border-input bg-muted/30 text-center text-xs text-muted-foreground hover:bg-muted/60">
+                      {r.photo ? (
+                        <img src={r.photo} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="flex flex-col items-center gap-1">
+                          <ImagePlus className="h-5 w-5" />
+                          Photo<br />(optional)
+                        </span>
+                      )}
                       <input type="file" hidden accept="image/*" onChange={(e) => e.target.files?.[0] && photo(e.target.files[0])} />
                     </label>
                   </div>
-                  <div className={b.two}>{field("Email", "email", "you@gmail.com")}{field("Phone", "phone", "+263…")}</div>
-                  <div className={b.two}>{field("Location", "location", "Harare, Zimbabwe")}{field("LinkedIn", "linkedin", "linkedin.com/in/…")}</div>
+                  <div className="grid gap-4 sm:grid-cols-2">{field("Email", "email", "you@gmail.com")}{field("Phone", "phone", "+263…")}</div>
+                  <div className="grid gap-4 sm:grid-cols-2">{field("Location", "location", "Harare, Zimbabwe")}{field("LinkedIn", "linkedin", "linkedin.com/in/…")}</div>
                   {field("Website / Portfolio", "website", "optional")}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             )}
 
             {step === 1 && (
-              <div className="card">
-                <div className="spread"><h2 className={b.h}>Experience</h2>
-                  <button className="btn ghost sm" onClick={() => set("experience", [...r.experience, blankExp()])}>+ Add role</button></div>
-                <p className={b.sub}>Start with your most recent role.</p>
-                <div className={b.formCard}>
-                  {r.experience.length === 0 && <p className="muted">No roles yet — add your first one.</p>}
-                  {r.experience.map((e, i) => (
-                    <div key={i} className={b.entry}>
-                      <button className={b.removeBtn} onClick={() => set("experience", r.experience.filter((_, j) => j !== i))}>×</button>
-                      <div className={b.two}>
-                        <input className="input" placeholder="Job title" value={e.role} onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, role: ev.target.value }; set("experience", x); }} />
-                        <input className="input" placeholder="Company" value={e.company} onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, company: ev.target.value }; set("experience", x); }} />
+              <Card>
+                <CardContent className="space-y-4 pt-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Experience</h2>
+                    <Button variant="outline" size="sm" onClick={() => set("experience", [...r.experience, blankExp()])}>
+                      <Plus className="h-4 w-4" /> Add role
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Start with your most recent role.</p>
+                  <div className="space-y-4">
+                    {r.experience.length === 0 && <p className="text-sm text-muted-foreground">No roles yet — add your first one.</p>}
+                    {r.experience.map((e, i) => (
+                      <div key={i} className="relative space-y-3 rounded-md border border-border p-4">
+                        <Button variant="ghost" size="icon" className="absolute right-2 top-2 h-7 w-7" onClick={() => set("experience", r.experience.filter((_, j) => j !== i))}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <div className="grid gap-3 pr-8 sm:grid-cols-2">
+                          <Input placeholder="Job title" value={e.role} onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, role: ev.target.value }; set("experience", x); }} />
+                          <Input placeholder="Company" value={e.company} onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, company: ev.target.value }; set("experience", x); }} />
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <Input placeholder="Location" value={e.location} onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, location: ev.target.value }; set("experience", x); }} />
+                          <Input placeholder="Start (Jan 2021)" value={e.start} onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, start: ev.target.value }; set("experience", x); }} />
+                          <Input placeholder="End (Present)" value={e.end} onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, end: ev.target.value }; set("experience", x); }} />
+                        </div>
+                        <Textarea rows={3} placeholder="Key achievements — one per line" value={e.bullets.join("\n")}
+                          onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, bullets: ev.target.value.split("\n").filter(Boolean) }; set("experience", x); }} />
                       </div>
-                      <div className={b.three}>
-                        <input className="input" placeholder="Location" value={e.location} onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, location: ev.target.value }; set("experience", x); }} />
-                        <input className="input" placeholder="Start (Jan 2021)" value={e.start} onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, start: ev.target.value }; set("experience", x); }} />
-                        <input className="input" placeholder="End (Present)" value={e.end} onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, end: ev.target.value }; set("experience", x); }} />
-                      </div>
-                      <textarea className="textarea" rows={3} placeholder="Key achievements — one per line" value={e.bullets.join("\n")}
-                        onChange={(ev) => { const x = [...r.experience]; x[i] = { ...e, bullets: ev.target.value.split("\n").filter(Boolean) }; set("experience", x); }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {step === 2 && (
-              <div className="card">
-                <div className="spread"><h2 className={b.h}>Education</h2>
-                  <button className="btn ghost sm" onClick={() => set("education", [...r.education, blankEdu()])}>+ Add</button></div>
-                <div className={b.formCard}>
-                  {r.education.map((e, i) => (
-                    <div key={i} className={b.entry}>
-                      <button className={b.removeBtn} onClick={() => set("education", r.education.filter((_, j) => j !== i))}>×</button>
-                      <div className={b.two}>
-                        <input className="input" placeholder="Degree / qualification" value={e.degree} onChange={(ev) => { const x = [...r.education]; x[i] = { ...e, degree: ev.target.value }; set("education", x); }} />
-                        <input className="input" placeholder="Institution" value={e.institution} onChange={(ev) => { const x = [...r.education]; x[i] = { ...e, institution: ev.target.value }; set("education", x); }} />
+              <Card>
+                <CardContent className="space-y-4 pt-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Education</h2>
+                    <Button variant="outline" size="sm" onClick={() => set("education", [...r.education, blankEdu()])}>
+                      <Plus className="h-4 w-4" /> Add
+                    </Button>
+                  </div>
+                  <div className="space-y-4">
+                    {r.education.map((e, i) => (
+                      <div key={i} className="relative space-y-3 rounded-md border border-border p-4">
+                        <Button variant="ghost" size="icon" className="absolute right-2 top-2 h-7 w-7" onClick={() => set("education", r.education.filter((_, j) => j !== i))}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <div className="grid gap-3 pr-8 sm:grid-cols-2">
+                          <Input placeholder="Degree / qualification" value={e.degree} onChange={(ev) => { const x = [...r.education]; x[i] = { ...e, degree: ev.target.value }; set("education", x); }} />
+                          <Input placeholder="Institution" value={e.institution} onChange={(ev) => { const x = [...r.education]; x[i] = { ...e, institution: ev.target.value }; set("education", x); }} />
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <Input placeholder="Location" value={e.location} onChange={(ev) => { const x = [...r.education]; x[i] = { ...e, location: ev.target.value }; set("education", x); }} />
+                          <Input placeholder="Start" value={e.start} onChange={(ev) => { const x = [...r.education]; x[i] = { ...e, start: ev.target.value }; set("education", x); }} />
+                          <Input placeholder="End" value={e.end} onChange={(ev) => { const x = [...r.education]; x[i] = { ...e, end: ev.target.value }; set("education", x); }} />
+                        </div>
                       </div>
-                      <div className={b.three}>
-                        <input className="input" placeholder="Location" value={e.location} onChange={(ev) => { const x = [...r.education]; x[i] = { ...e, location: ev.target.value }; set("education", x); }} />
-                        <input className="input" placeholder="Start" value={e.start} onChange={(ev) => { const x = [...r.education]; x[i] = { ...e, start: ev.target.value }; set("education", x); }} />
-                        <input className="input" placeholder="End" value={e.end} onChange={(ev) => { const x = [...r.education]; x[i] = { ...e, end: ev.target.value }; set("education", x); }} />
-                      </div>
-                    </div>
-                  ))}
-                  {r.education.length === 0 && <p className="muted">Add your highest qualification.</p>}
-                </div>
-              </div>
+                    ))}
+                    {r.education.length === 0 && <p className="text-sm text-muted-foreground">Add your highest qualification.</p>}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {step === 3 && (
-              <div className="card">
-                <div className="spread"><h2 className={b.h}>Skills</h2>
-                  <button className="btn ghost sm" onClick={() => set("skills", [...r.skills, { name: "", level: 3 } as Skill])}>+ Add skill</button></div>
-                <p className={b.sub}>Level shows as rating bars on some templates.</p>
-                <div className={b.formCard}>
-                  {r.skills.map((k, i) => (
-                    <div key={i} className="row" style={{ gap: 10 }}>
-                      <input className="input" placeholder="Skill" value={k.name} onChange={(ev) => { const x = [...r.skills]; x[i] = { ...k, name: ev.target.value }; set("skills", x); }} />
-                      <select className="select" style={{ width: 150 }} value={k.level} onChange={(ev) => { const x = [...r.skills]; x[i] = { ...k, level: Number(ev.target.value) as Skill["level"] }; set("skills", x); }}>
-                        <option value={1}>Beginner</option><option value={2}>Basic</option><option value={3}>Proficient</option><option value={4}>Advanced</option><option value={5}>Expert</option>
-                      </select>
-                      <button className={b.removeBtn} style={{ position: "static" }} onClick={() => set("skills", r.skills.filter((_, j) => j !== i))}>×</button>
+              <Card>
+                <CardContent className="space-y-4 pt-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Skills</h2>
+                    <Button variant="outline" size="sm" onClick={() => set("skills", [...r.skills, { name: "", level: 3 } as Skill])}>
+                      <Plus className="h-4 w-4" /> Add skill
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Level shows as rating bars on some templates.</p>
+                  <div className="space-y-3">
+                    {r.skills.map((k, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input placeholder="Skill" value={k.name} onChange={(ev) => { const x = [...r.skills]; x[i] = { ...k, name: ev.target.value }; set("skills", x); }} />
+                        <select className={cn(selectClass, "w-40 shrink-0")} value={k.level} onChange={(ev) => { const x = [...r.skills]; x[i] = { ...k, level: Number(ev.target.value) as Skill["level"] }; set("skills", x); }}>
+                          <option value={1}>Beginner</option><option value={2}>Basic</option><option value={3}>Proficient</option><option value={4}>Advanced</option><option value={5}>Expert</option>
+                        </select>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => set("skills", r.skills.filter((_, j) => j !== i))}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    {r.skills.length === 0 && <p className="text-sm text-muted-foreground">Add a few key skills.</p>}
+                    <div className="space-y-1.5">
+                      <Label>Languages (comma separated)</Label>
+                      <Input value={r.languages.join(", ")} onChange={(e) => set("languages", e.target.value.split(",").map((x) => x.trim()).filter(Boolean))} />
                     </div>
-                  ))}
-                  {r.skills.length === 0 && <p className="muted">Add a few key skills.</p>}
-                  <div className="col"><label className="label">Languages (comma separated)</label>
-                    <input className="input" value={r.languages.join(", ")} onChange={(e) => set("languages", e.target.value.split(",").map((x) => x.trim()).filter(Boolean))} /></div>
-                </div>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {step === 4 && (
-              <div className="card">
-                <h2 className={b.h}>Summary & extras</h2>
-                <div className={b.formCard}>
-                  <div className="col"><label className="label">Professional summary</label>
-                    <textarea className="textarea" rows={5} value={r.summary} onChange={(e) => set("summary", e.target.value)} placeholder="2–4 sentences about who you are and the value you bring." /></div>
-                  <div className="col"><label className="label">Key achievements (one per line)</label>
-                    <textarea className="textarea" rows={3} value={r.achievements.join("\n")} onChange={(e) => set("achievements", e.target.value.split("\n").filter(Boolean))} /></div>
-                  <div className="col"><label className="label">Certifications (one per line)</label>
-                    <textarea className="textarea" rows={3} value={r.certifications.join("\n")} onChange={(e) => set("certifications", e.target.value.split("\n").filter(Boolean))} /></div>
-                </div>
-              </div>
+              <Card>
+                <CardContent className="space-y-4 pt-6">
+                  <h2 className="text-lg font-semibold">Summary & extras</h2>
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label>Professional summary</Label>
+                      <Textarea rows={5} value={r.summary} onChange={(e) => set("summary", e.target.value)} placeholder="2–4 sentences about who you are and the value you bring." />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Key achievements (one per line)</Label>
+                      <Textarea rows={3} value={r.achievements.join("\n")} onChange={(e) => set("achievements", e.target.value.split("\n").filter(Boolean))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Certifications (one per line)</Label>
+                      <Textarea rows={3} value={r.certifications.join("\n")} onChange={(e) => set("certifications", e.target.value.split("\n").filter(Boolean))} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {step === 5 && (
-              <div className="card">
-                <h2 className={b.h}>Choose your look</h2>
-                <p className={b.sub}>Pick a template and accent, then Download PDF.</p>
-                <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  {TEMPLATES.map((tp) => (
-                    <button key={tp.id} className={`${b.tmplBtn} ${r.template === tp.id ? b.tmplBtnActive : ""}`} style={{ textAlign: "left", padding: 12 }} onClick={() => set("template", tp.id)}>
-                      <div style={{ fontSize: 14 }}>{tp.name}</div><div className="muted" style={{ fontWeight: 400 }}>{tp.blurb}</div>
-                    </button>
-                  ))}
-                </div>
-                <div style={{ marginTop: 14 }}><label className="label">Accent colour</label>
-                  <div className="row" style={{ gap: 8, marginTop: 6 }}>
-                    {ACCENTS.map((c) => <div key={c} className={b.swatch} style={{ background: c, outline: r.accent === c ? `2px solid ${c}` : "none" }} onClick={() => set("accent", c)} />)}
+              <Card>
+                <CardContent className="space-y-4 pt-6">
+                  <h2 className="text-lg font-semibold">Choose your look</h2>
+                  <p className="text-sm text-muted-foreground">Pick a template and accent, then Download PDF.</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {TEMPLATES.map((tp) => (
+                      <button
+                        key={tp.id}
+                        onClick={() => set("template", tp.id)}
+                        className={cn(
+                          "rounded-md border p-3 text-left transition-colors hover:bg-accent",
+                          r.template === tp.id ? "border-primary ring-1 ring-primary" : "border-input",
+                        )}
+                      >
+                        <div className="text-sm font-medium">{tp.name}</div>
+                        <div className="text-sm text-muted-foreground">{tp.blurb}</div>
+                      </button>
+                    ))}
                   </div>
-                </div>
-                <button className="btn" style={{ marginTop: 18 }} onClick={() => window.print()}>⬇ Download PDF</button>
-              </div>
+                  <div className="space-y-2">
+                    <Label>Accent colour</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {ACCENTS.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => set("accent", c)}
+                          className={cn(
+                            "h-7 w-7 rounded-full border border-black/10 transition-transform hover:scale-110",
+                            r.accent === c && "ring-2 ring-offset-2",
+                          )}
+                          style={{ background: c, ...(r.accent === c ? { boxShadow: `0 0 0 2px ${c}` } : {}) }}
+                          aria-label={`Accent ${c}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <Button onClick={() => window.print()}>
+                    <Download className="h-4 w-4" /> Download PDF
+                  </Button>
+                </CardContent>
+              </Card>
             )}
 
-            <div className={b.nav}>
-              <button className="btn ghost" disabled={step === 0} onClick={() => setStep(step - 1)}>← Back</button>
-              {step < STEPS.length - 1
-                ? <button className="btn" onClick={() => setStep(step + 1)}>Next →</button>
-                : <button className="btn green" onClick={() => window.print()}>Finish & Download</button>}
+            <div className="flex items-center justify-between gap-3">
+              <Button variant="ghost" disabled={step === 0} onClick={() => setStep(step - 1)}>
+                <ChevronLeft className="h-4 w-4" /> Back
+              </Button>
+              {step < STEPS.length - 1 ? (
+                <Button onClick={() => setStep(step + 1)}>
+                  Next <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button variant="success" onClick={() => window.print()}>
+                  <Download className="h-4 w-4" /> Finish & Download
+                </Button>
+              )}
             </div>
           </div>
 
@@ -226,6 +354,6 @@ export default function ResumeBuilder() {
 
       {/* Full-size sheet for printing only */}
       <div className="print-only"><ResumeSheet resume={r} /></div>
-    </>
+    </div>
   );
 }

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Check, Loader2, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PLANS, PlanId } from "@/lib/plans";
-import styles from "../billing.module.css";
 
 export default function BillingReturnPage() {
   const [status, setStatus] = useState<string | null>(null);
@@ -53,31 +55,51 @@ export default function BillingReturnPage() {
   const paid = status === "paid";
 
   return (
-    <div className="content">
-      <div className={`card ${styles.returnWrap}`}>
+    <div className="mx-auto flex w-full max-w-md flex-col items-center px-4 py-16 sm:px-6">
+      <Card className="w-full text-center">
         {paid ? (
           <>
-            <h1 className={styles.returnTitle}>Payment confirmed 🎉</h1>
-            <p className={styles.returnSub}>You're on {planName}! Your daily auto-apply cap has been raised.</p>
+            <CardHeader className="items-center space-y-3">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/40">
+                <Check className="h-7 w-7" />
+              </div>
+              <CardTitle>Payment confirmed</CardTitle>
+              <CardDescription>You're on {planName}! Your daily auto-apply cap has been raised.</CardDescription>
+            </CardHeader>
+            <CardFooter className="justify-center">
+              <Button asChild>
+                <Link href="/">
+                  Back to dashboard
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </CardFooter>
           </>
         ) : done ? (
           <>
-            <h1 className={styles.returnTitle}>Awaiting confirmation…</h1>
-            <p className={styles.returnSub}>
-              We haven't seen Paynow confirm this payment yet. If you completed it, your plan will update
-              automatically within a few minutes — no need to pay again.
-            </p>
+            <CardHeader className="items-center space-y-3">
+              <CardTitle>Awaiting confirmation…</CardTitle>
+              <CardDescription>
+                We haven't seen Paynow confirm this payment yet. If you completed it, your plan will update
+                automatically within a few minutes — no need to pay again.
+              </CardDescription>
+            </CardHeader>
+            <CardFooter className="justify-center">
+              <Button asChild variant="ghost">
+                <Link href="/">Back to dashboard</Link>
+              </Button>
+            </CardFooter>
           </>
         ) : (
-          <>
-            <h1 className={styles.returnTitle}>Confirming your payment…</h1>
-            <p className={styles.returnSub}>
-              <span className="spinner" /> Checking with Paynow…
-            </p>
-          </>
+          <CardContent className="flex flex-col items-center gap-4 py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-1">
+              <p className="font-medium">Confirming your payment…</p>
+              <p className="text-sm text-muted-foreground">Checking with Paynow…</p>
+            </div>
+          </CardContent>
         )}
-        <Link className="btn ghost" href="/">Back to dashboard</Link>
-      </div>
+      </Card>
     </div>
   );
 }

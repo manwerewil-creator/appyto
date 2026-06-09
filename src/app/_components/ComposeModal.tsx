@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Send } from "lucide-react";
 
 export interface ComposeJob { id: string; title: string; apply_email: string | null; }
 
@@ -38,31 +43,70 @@ export default function ComposeModal({
   };
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", display: "grid", placeItems: "center", zIndex: 50, padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "min(640px,100%)", maxHeight: "90vh", overflow: "auto" }}>
-        <div className="spread" style={{ marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Write your email</h3>
-          <button className="btn ghost sm" onClick={onClose}>Close</button>
+    <Sheet open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-4 overflow-y-auto sm:max-w-xl"
+      >
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold tracking-tight">Write your email</h3>
+          <p className="text-sm text-muted-foreground">
+            Applying to <span className="font-medium text-foreground">{job.title}</span>
+          </p>
         </div>
-        <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>Applying to <b>{job.title}</b></p>
 
-        {loading ? <div className="empty">Preparing draft…</div> : (
-          <div className="grid" style={{ gap: 12 }}>
-            <div className="col"><label className="label">To</label>
-              <input className="input" value={job.apply_email ?? ""} disabled /></div>
-            <div className="col"><label className="label">Subject</label>
-              <input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} /></div>
-            <div className="col"><label className="label">Message (edit freely — this is exactly what gets sent)</label>
-              <textarea className="textarea" rows={12} value={body} onChange={(e) => setBody(e.target.value)} /></div>
-            <p className="muted" style={{ fontSize: 12, margin: 0 }}>Your CV is attached automatically if you’ve uploaded one.</p>
-            {error && <div className="card" style={{ background: "var(--red-soft)", borderColor: "#f3c9c9", color: "var(--red)" }}>{error}</div>}
-            <div className="row" style={{ justifyContent: "flex-end", gap: 10 }}>
-              <button className="btn ghost" onClick={onClose}>Cancel</button>
-              <button className="btn green" onClick={send} disabled={sending || !job.apply_email}>{sending ? <span className="spinner" /> : "Send application"}</button>
+        {loading ? (
+          <div className="flex items-center gap-2 py-12 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Preparing draft…
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="compose-to">To</Label>
+              <Input id="compose-to" value={job.apply_email ?? ""} disabled />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="compose-subject">Subject</Label>
+              <Input
+                id="compose-subject"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="compose-body">
+                Message (edit freely — this is exactly what gets sent)
+              </Label>
+              <Textarea
+                id="compose-body"
+                rows={12}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Your CV is attached automatically if you’ve uploaded one.
+            </p>
+            {error && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+            <div className="mt-auto flex flex-wrap items-center justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={onClose}>Cancel</Button>
+              <Button variant="success" onClick={send} disabled={sending || !job.apply_email}>
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Send application
+              </Button>
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }
