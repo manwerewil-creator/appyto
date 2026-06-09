@@ -160,6 +160,20 @@ create table if not exists public.payments (
 );
 create index if not exists pay_user_idx on public.payments (user_id, created_at desc);
 
+-- ─── Activity log (the app's "memory" of what each user does) ───────────────
+-- A per-user audit trail: applications sent, profile/email updates, plan
+-- changes, onboarding, sign-ins. Append-only, surfaced as a Recent Activity
+-- feed. Writes never block the action that produced them.
+create table if not exists public.activity_events (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  type        text not null,                  -- application_sent, profile_updated, email_connected, plan_upgraded, onboarded, signed_in, …
+  summary     text,                            -- human-readable one-liner
+  meta        jsonb default '{}',              -- structured detail (job_id, plan, etc.)
+  created_at  timestamptz default now()
+);
+create index if not exists activity_user_idx on public.activity_events (user_id, created_at desc);
+
 -- ─── Row Level Security ─────────────────────────────────────────────────────
 alter table public.profiles         enable row level security;
 alter table public.send_credentials enable row level security;
@@ -168,6 +182,7 @@ alter table public.subscriptions    enable row level security;
 alter table public.payments         enable row level security;
 alter table public.jobs             enable row level security;
 alter table public.plans            enable row level security;
+alter table public.activity_events  enable row level security;
 
 drop policy if exists "own profile" on public.profiles;
 create policy "own profile" on public.profiles for all using (auth.uid() = id) with check (auth.uid() = id);
@@ -179,6 +194,8 @@ drop policy if exists "own subs" on public.subscriptions;
 create policy "own subs" on public.subscriptions for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 drop policy if exists "own pays" on public.payments;
 create policy "own pays" on public.payments for select using (auth.uid() = user_id);
+drop policy if exists "own activity" on public.activity_events;
+create policy "own activity" on public.activity_events for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 drop policy if exists "jobs public read" on public.jobs;
 create policy "jobs public read" on public.jobs for select using (true);
 drop policy if exists "plans public read" on public.plans;

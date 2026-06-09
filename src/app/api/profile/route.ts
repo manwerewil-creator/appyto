@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
-import { fetchProfile, saveProfile } from "@/lib/data";
+import { fetchProfile, saveProfile, logActivity } from "@/lib/data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,6 +66,16 @@ export async function POST(req: NextRequest) {
       .filter((r) => r.url);
   }
 
+  // Read prior state so we can log meaningful activity without spamming the
+  // feed during onboarding's per-step saves.
+  const prev = await fetchProfile(sb, user.id);
   const profile = await saveProfile(sb, user.id, patch);
+
+  if (patch.onboarded === true && !prev?.onboarded) {
+    await logActivity(sb, user.id, "onboarded", "Completed onboarding 🎉");
+  } else if (prev?.onboarded && Object.keys(patch).length > 0) {
+    await logActivity(sb, user.id, "profile_updated", "Updated profile & job preferences");
+  }
+
   return NextResponse.json({ ok: true, profile });
 }

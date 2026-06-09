@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { PLANS, PlanId } from "@/lib/plans";
 import { pollStatus } from "@/lib/paynow";
+import { logActivity } from "@/lib/data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,6 +45,10 @@ export async function POST(req: NextRequest) {
         .from("profiles")
         .update({ plan_id: pay.plan_id, daily_cap: PLANS[planId].dailyApplyCap })
         .eq("id", pay.user_id);
+
+      await logActivity(admin, pay.user_id, "plan_upgraded",
+        `Upgraded to ${PLANS[planId].name} — $${pay.amount_usd}/mo`,
+        { plan_id: pay.plan_id, amount_usd: pay.amount_usd, reference });
     }
   }
 

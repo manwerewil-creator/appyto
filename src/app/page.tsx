@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import ActivityFeed from "./_components/ActivityFeed";
 
 interface Stats {
   totalJobs: number; openJobs: number; companies: number; withEmail: number;
@@ -113,6 +114,8 @@ export default function Overview() {
           </div>
         </>
       )}
+
+      <ActivityFeed />
     </div>
   );
 }

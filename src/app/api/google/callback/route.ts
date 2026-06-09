@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
-import { saveCreds } from "@/lib/data";
+import { saveCreds, logActivity } from "@/lib/data";
 import { encrypt } from "@/lib/crypto";
 import { exchangeCode, emailFromIdToken } from "@/lib/google";
 
@@ -23,12 +23,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/settings?google=norefresh`);
   }
 
+  const fromEmail = emailFromIdToken(tokens.id_token) ?? "";
   await saveCreds(sb, user.id, {
     method: "google",
-    from_email: emailFromIdToken(tokens.id_token) ?? "",
+    from_email: fromEmail,
     google_refresh_enc: encrypt(tokens.refresh_token),
     verified: true,
   });
+  await logActivity(sb, user.id, "email_connected",
+    `Connected Gmail${fromEmail ? ` (${fromEmail})` : ""}`, { method: "google", from_email: fromEmail });
 
   return NextResponse.redirect(`${origin}/settings?google=connected`);
 }

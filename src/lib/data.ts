@@ -82,6 +82,29 @@ export async function updateApplication(sb: SB, id: string, patch: Record<string
   await sb.from("applications").update(patch).eq("id", id);
 }
 
+// ── Activity log ("memory") ─────────────────────────────────────────────────
+// Append-only audit trail of what each user does. logActivity NEVER throws —
+// failing to record an event must not break the action that triggered it.
+export interface ActivityRow {
+  id: string; user_id: string; type: string;
+  summary: string | null; meta: Record<string, unknown>; created_at: string;
+}
+export async function logActivity(
+  sb: SB, userId: string, type: string, summary: string,
+  meta: Record<string, unknown> = {},
+): Promise<void> {
+  try {
+    await sb.from("activity_events").insert({ user_id: userId, type, summary, meta });
+  } catch {
+    // Best-effort: swallow (e.g. table not migrated yet) — never block the caller.
+  }
+}
+export async function fetchActivity(sb: SB, userId: string, limit = 50): Promise<ActivityRow[]> {
+  const { data } = await sb.from("activity_events").select("*")
+    .eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
+  return (data ?? []) as ActivityRow[];
+}
+
 // ── Résumé (stored as jsonb on the profile) ────────────────────────────────
 export async function fetchResume(sb: SB, userId: string): Promise<Resume> {
   const p = await fetchProfile(sb, userId);

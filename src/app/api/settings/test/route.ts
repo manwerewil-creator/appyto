@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
-import { fetchCreds, saveCreds } from "@/lib/data";
+import { fetchCreds, saveCreds, logActivity } from "@/lib/data";
 import { credsToConfig, verifyConfig } from "@/lib/mailer";
 
 export const runtime = "nodejs";
@@ -21,6 +21,10 @@ export async function POST() {
 
   const cfg = credsToConfig(creds);
   const r = await verifyConfig(cfg);
-  if (r.ok) await saveCreds(sb, user.id, { verified: true });
+  if (r.ok) {
+    await saveCreds(sb, user.id, { verified: true });
+    await logActivity(sb, user.id, "email_connected",
+      `Connected sending email (${creds.from_email})`, { method: "smtp", from_email: creds.from_email });
+  }
   return NextResponse.json(r, { status: r.ok ? 200 : 400 });
 }

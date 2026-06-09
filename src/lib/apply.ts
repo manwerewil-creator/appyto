@@ -4,7 +4,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   fetchJobById, fetchProfile, fetchCreds, hasApplied, appliedToday,
-  addApplication, updateApplication, fetchJobs, type ProfileRow,
+  addApplication, updateApplication, fetchJobs, logActivity, type ProfileRow,
 } from "./data";
 import { credsToConfig, emailReady, sendApplication } from "./mailer";
 import { supabaseAdmin } from "./supabase/server";
@@ -71,10 +71,16 @@ export async function applyToJob(
     const [cv, attachments] = await Promise.all([getCv(profile), getResourceFiles(profile)]);
     const { subject } = await sendApplication({ config: credsToConfig(creds!), job, profile: profile ?? {}, cv, attachments, override });
     await updateApplication(sb, rec.id, { status: "sent", subject, sent_at: new Date().toISOString() });
+    await logActivity(sb, userId, "application_sent",
+      `Applied to ${job.title}${job.company ? ` · ${job.company}` : ""}`,
+      { job_id: job.id, company: job.company, to_email: job.apply_email });
     return { ok: true, status: "sent" };
   } catch (err: any) {
-    await updateApplication(sb, rec.id, { status: "failed", error: String(err?.message ?? err) });
-    return { ok: false, status: "failed", reason: String(err?.message ?? err) };
+    const reason = String(err?.message ?? err);
+    await updateApplication(sb, rec.id, { status: "failed", error: reason });
+    await logActivity(sb, userId, "application_failed",
+      `Application failed: ${job.title}`, { job_id: job.id, error: reason });
+    return { ok: false, status: "failed", reason };
   }
 }
 

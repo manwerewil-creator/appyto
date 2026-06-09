@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { logActivity } from "@/lib/data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +53,7 @@ export async function GET(req: NextRequest) {
     const { data: profile } = await supabase
       .from("profiles").select("onboarded").eq("id", user.id).maybeSingle();
     dest = profile?.onboarded ? "/" : "/onboarding";
+    await logActivity(supabase, user.id, "signed_in", "Signed in");
   }
 
   const res = NextResponse.redirect(`${origin}${dest}`);
