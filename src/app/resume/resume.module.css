@@ -1,0 +1,88 @@
+/* A4 sheet shared by all templates. 210×297mm. */
+.sheet {
+  width: 210mm;
+  min-height: 297mm;
+  background: #fff;
+  color: #1f2937;
+  box-sizing: border-box;
+  font-size: 10.5px;
+  line-height: 1.5;
+  font-family: Inter, ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+}
+.sheet ul { margin: 4px 0 0; padding-left: 15px; }
+.sheet li { margin: 2px 0; }
+.sheet p { margin: 0; }
+.contactRow { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.contactRow span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ── Classic (serif, centered, ATS) ──────────────────────────────────────── */
+.classic { padding: 16mm 15mm; font-family: Georgia, "Times New Roman", serif; color: #222; }
+.classicName { font-size: 27px; letter-spacing: .5px; text-align: center; font-weight: 700; }
+.classicHead { text-align: center; color: #555; font-size: 12px; margin-top: 2px; }
+.classicContact { justify-content: center; margin-top: 8px; color: #444; font-size: 10px; }
+.classicSecTitle {
+  font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  border-bottom: 1.5px solid #222; padding-bottom: 3px; margin: 16px 0 8px;
+}
+.classicJob { display: flex; justify-content: space-between; gap: 10px; }
+.classicJob h4 { margin: 0; font-size: 11.5px; }
+.classicJobMeta { color: #555; font-style: italic; font-size: 10px; }
+.classicSkills { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px 18px; }
+
+/* ── Modern (colour header band, two columns) ────────────────────────────── */
+.modernHeader { padding: 14mm 15mm 9mm; color: #fff; }
+.modernName { font-size: 28px; font-weight: 800; letter-spacing: .3px; }
+.modernHead { font-size: 12.5px; opacity: .92; margin-top: 2px; }
+.modernContact { margin-top: 9px; font-size: 9.6px; color: rgba(255,255,255,.95); }
+.modernBody { display: grid; grid-template-columns: 1.55fr 1fr; gap: 18px; padding: 11mm 15mm; }
+.modernSecTitle {
+  font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px;
+  padding-bottom: 3px; margin: 0 0 7px; border-bottom: 2px solid currentColor;
+}
+.modernBlock { margin-bottom: 14px; }
+.modernJob { margin-bottom: 9px; }
+.modernJob h4 { margin: 0; font-size: 11px; }
+.modernJobMeta { display: flex; justify-content: space-between; gap: 8px; color: #6b7280; font-size: 9.4px; margin: 1px 0 2px; }
+.chipList { display: flex; flex-wrap: wrap; gap: 5px; }
+.chipList span { background: #f1f5f9; border-radius: 4px; padding: 2px 7px; font-size: 9.4px; }
+
+/* ── Sidebar (photo + skill ratings) ─────────────────────────────────────── */
+.sidebarWrap { display: grid; grid-template-columns: 67mm 1fr; min-height: 297mm; }
+.sidebarCol { padding: 13mm 9mm; color: #fff; }
+.sidebarPhoto {
+  width: 84px; height: 84px; border-radius: 50%; object-fit: cover;
+  border: 3px solid rgba(255,255,255,.6); display: block; margin: 0 0 12px;
+}
+.sidebarPhotoFallback {
+  width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,255,255,.18); font-size: 30px; font-weight: 700; margin-bottom: 12px;
+}
+.mainCol { padding: 13mm 12mm; }
+.sidebarSecTitle {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+  margin: 16px 0 7px; color: rgba(255,255,255,.95);
+}
+.sidebarSecTitle:first-of-type { margin-top: 4px; }
+.mainName { font-size: 25px; font-weight: 800; }
+.mainHead { color: #6b7280; font-size: 12.5px; margin: 1px 0 0; }
+.mainSecTitle {
+  font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px;
+  border-bottom: 2px solid currentColor; padding-bottom: 3px; margin: 16px 0 8px;
+}
+.ratingRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 5px 0; font-size: 9.6px; }
+.dots { display: inline-flex; gap: 3px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.3); }
+.dotOn { background: #fff; }
+
+/* ── Minimal (clean, whitespace) ─────────────────────────────────────────── */
+.minimal { padding: 20mm 18mm; }
+.minimalName { font-size: 30px; font-weight: 300; letter-spacing: 1px; }
+.minimalHead { font-size: 12.5px; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }
+.minimalContact { margin-top: 12px; color: #6b7280; font-size: 9.8px; gap: 4px 16px; }
+.minimalRule { height: 1px; background: #e5e7eb; margin: 16px 0; }
+.minimalSecTitle { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 2.5px; color: #9ca3af; margin: 0 0 8px; }
+.minimalGrid { display: grid; grid-template-columns: 22mm 1fr; gap: 4px 14px; }
+.minimalJob { margin-bottom: 12px; }
+.minimalJob h4 { margin: 0; font-size: 11.5px; font-weight: 600; }
+.minimalJobMeta { color: #9ca3af; font-size: 9.6px; margin: 1px 0 3px; }

@@ -1,0 +1,33 @@
+{
+  "name": "appyto",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Appyto — a portable, local-first web app that aggregates Zimbabwean jobs (jobszimbabwe.co.zw, applynow.co.zw), matches them to you with pure code, and applies on your behalf via your own Gmail/SMTP.",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "scrape": "tsx scripts/scrape/run.ts",
+    "scrape:jobszimbabwe": "tsx scripts/scrape/run.ts --source=jobszimbabwe",
+    "scrape:applynow": "tsx scripts/scrape/run.ts --source=applynow",
+    "scrape:sample": "tsx scripts/scrape/run.ts --pages=2"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "next": "^15.0.3",
+    "nodemailer": "^6.9.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "@types/nodemailer": "^6.4.16",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "csv-stringify": "^6.5.1",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}

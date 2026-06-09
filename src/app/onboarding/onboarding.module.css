@@ -1,0 +1,10 @@
+.wrap { max-width: 720px; margin: 0 auto; }
+.steps { display: flex; gap: 8px; margin-bottom: 22px; }
+.bar { flex: 1; height: 6px; border-radius: 999px; background: var(--border); }
+.barOn { background: var(--brand); }
+.h { font-size: 24px; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 18px; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text); }
+.pillOn { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
+.nav { display: flex; justify-content: space-between; margin-top: 22px; }
