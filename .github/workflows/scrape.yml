@@ -1,0 +1,37 @@
+name: Scrape jobs into Supabase
+
+# Runs the scraper on a schedule (GitHub-hosted runner, no Vercel timeout) and
+# upserts every job into the Supabase `jobs` table. Also runnable on demand.
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours (UTC)
+  workflow_dispatch:         # lets you run it manually from the Actions tab
+    inputs:
+      pages:
+        description: "Pages per source (blank = full crawl)"
+        required: false
+        default: ""
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - name: Scrape
+        run: |
+          if [ -n "${{ github.event.inputs.pages }}" ]; then
+            npm run scrape -- --pages=${{ github.event.inputs.pages }}
+          else
+            npm run scrape
+          fi
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SCRAPE_DELAY_MS: "300"
+          SCRAPE_CONCURRENCY: "4"
