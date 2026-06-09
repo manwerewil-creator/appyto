@@ -1,3 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* shadcn/ui theme — namespaced --sb-* so it never collides with the legacy
+   design tokens below (which existing pages still use). */
+@layer base {
+  :root {
+    --sb-background: 0 0% 100%;
+    --sb-foreground: 222 47% 11%;
+    --sb-card: 0 0% 100%;
+    --sb-card-foreground: 222 47% 11%;
+    --sb-popover: 0 0% 100%;
+    --sb-popover-foreground: 222 47% 11%;
+    --sb-primary: 221 83% 53%;
+    --sb-primary-foreground: 0 0% 100%;
+    --sb-secondary: 210 40% 96%;
+    --sb-secondary-foreground: 222 47% 11%;
+    --sb-muted: 210 40% 96%;
+    --sb-muted-foreground: 215 16% 47%;
+    --sb-accent: 214 95% 96%;
+    --sb-accent-foreground: 221 83% 45%;
+    --sb-destructive: 0 72% 51%;
+    --sb-destructive-foreground: 0 0% 100%;
+    --sb-success: 142 71% 45%;
+    --sb-success-foreground: 0 0% 100%;
+    --sb-border: 214 32% 91%;
+    --sb-input: 214 32% 91%;
+    --sb-ring: 221 83% 53%;
+  }
+}
+
 :root {
   --bg: #ffffff;
   --bg-soft: #f6f7f9;

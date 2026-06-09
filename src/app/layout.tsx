@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter_Tight } from "next/font/google";
 import "./globals.css";
-import Sidebar from "./Sidebar";
+import AppShell from "@/components/app-shell";
 
 // Matches rylolabz.com — Inter Tight, self-hosted by Next for zero layout shift.
 const interTight = Inter_Tight({
@@ -29,10 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={interTight.variable}>
       <body>
-        <div className="app">
-          <Sidebar />
-          <div className="main">{children}</div>
-        </div>
+        <AppShell>{children}</AppShell>
         <script
           dangerouslySetInnerHTML={{
             __html:
