@@ -181,12 +181,13 @@ input, select, textarea, button { font-family: inherit; font-size: 15px; }
     0 0 0 4px hsl(var(--sb-primary) / 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
-/* The highlight pill behind the active bottom-nav item — slides between tabs. */
+/* The highlight pill behind the active bottom-nav item — slides between tabs.
+   Dim slate-gray with a small, soft shadow (not a glow). */
 .lg-pill {
-  background: linear-gradient(180deg, hsl(var(--sb-primary) / 0.95), hsl(var(--sb-primary)));
+  background: linear-gradient(180deg, hsl(215 14% 46%), hsl(215 16% 40%));
   box-shadow:
-    0 8px 20px -4px hsl(var(--sb-primary) / 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    0 2px 6px -2px rgba(16, 24, 40, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 /* Springy slide of the active pill from one tab to the next. */
 .lg-slide { transition: transform .5s cubic-bezier(.34, 1.4, .5, 1); }

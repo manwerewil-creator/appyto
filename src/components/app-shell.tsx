@@ -118,7 +118,7 @@ function BottomNav() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className="relative z-10 flex flex-1 flex-col items-center justify-center gap-1 rounded-[20px] py-2 text-center"
+              className="relative z-10 flex flex-1 flex-col items-center justify-center gap-1 rounded-[20px] py-1.5 text-center"
             >
               <Icon
                 className={cn(
