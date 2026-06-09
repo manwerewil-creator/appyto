@@ -40,14 +40,29 @@ export default function SettingsPage() {
 
   const set = (patch: Partial<SettingsView>) => setS((p) => p ? { ...p, ...patch } : p);
 
-  const saveSmtp = async () => {
-    if (!s) return; setBusy("save"); setMsg(null);
+  // Persist the current form. Returns false (with an inline error) if the
+  // required fields aren't there yet, so callers can bail before testing.
+  const persistSmtp = async (): Promise<boolean> => {
+    if (!s) return false;
+    const email = s.smtp_user.trim();
+    if (!email) { setMsg({ ok: false, text: "Enter your email address first." }); return false; }
+    if (!pass && !s.has_pass) { setMsg({ ok: false, text: "Enter your app password first." }); return false; }
     await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ smtp_host: s.smtp_host, smtp_port: s.smtp_port, smtp_user: s.smtp_user, ...(pass ? { smtp_pass: pass } : {}) }) });
-    setPass(""); await load(); setBusy(null); setMsg({ ok: true, text: "Saved. Now test the connection." });
+      body: JSON.stringify({ smtp_host: s.smtp_host, smtp_port: s.smtp_port, smtp_user: email, ...(pass ? { smtp_pass: pass } : {}) }) });
+    setPass(""); await load();
+    return true;
   };
+  const saveSmtp = async () => {
+    setBusy("save"); setMsg(null);
+    const ok = await persistSmtp();
+    setBusy(null);
+    if (ok) setMsg({ ok: true, text: "Saved. Now test the connection." });
+  };
+  // Always save what's on screen first, then verify — so Test reflects the form,
+  // not whatever happened to be saved before.
   const test = async () => {
     setBusy("test"); setMsg(null);
+    if (!(await persistSmtp())) { setBusy(null); return; }
     const d = await (await fetch("/api/settings/test", { method: "POST" })).json();
     setBusy(null); setMsg(d.ok ? { ok: true, text: "Connected! Your email is ready to send applications." } : { ok: false, text: d.error ?? "Could not connect." });
     await load();

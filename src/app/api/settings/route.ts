@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
   const smtp_user = typeof body.smtp_user === "string" ? body.smtp_user.trim() : "";
   const smtp_host = typeof body.smtp_host === "string" ? body.smtp_host.trim() : "";
   const smtp_port = typeof body.smtp_port === "number" ? body.smtp_port : 587;
-  const smtp_pass = typeof body.smtp_pass === "string" ? body.smtp_pass : "";
+  // Gmail shows app passwords as "abcd efgh ijkl mnop"; users paste the spaces
+  // and Gmail auth then fails. Strip all whitespace so it works either way.
+  const smtp_pass = typeof body.smtp_pass === "string" ? body.smtp_pass.replace(/\s+/g, "") : "";
 
   await saveCreds(sb, user.id, {
     method: "smtp",
