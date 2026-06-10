@@ -123,9 +123,19 @@ GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET          # gmail.send (NOT needed for log
 PAYNOW_INTEGRATION_ID, PAYNOW_INTEGRATION_KEY
 APP_URL=https://www.feasters.cloud              # build return/result/redirect URLs
 APPLY_ENCRYPTION_KEY                            # 32-byte hex, encrypts secrets
-CRON_SECRET                                     # protects /api/cron/apply
+CRON_SECRET                                     # protects /api/cron/apply + /api/cron/notify
+NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT   # Web Push
 ```
 `.env.local` is gitignored. `.env.example` has blank placeholders (safe to commit).
+
+**Web Push** (`src/lib/push.ts`, `/api/push/{subscribe,unsubscribe}`,
+`/api/cron/notify`, push handlers in `public/sw.js`, `NotificationBell` in the
+top bar): user grants permission → browser subscription saved to
+`push_subscriptions` → the notify cron (every 6h) scores jobs scraped since each
+user's `profiles.jobs_notified_at` watermark and pushes "N new jobs match you".
+Setup: run `supabase/migrations/002_push_notifications.sql` in the Supabase SQL
+editor and set the three VAPID vars in Vercel. Generate keys:
+`node -e "console.log(require('web-push').generateVAPIDKeys())"`.
 
 ## 8. Deploy / ops
 - GitHub: `manwerewil-creator/appyto` (private). `gh auth switch --user manwerewil-creator` to push.

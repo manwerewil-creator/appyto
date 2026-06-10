@@ -105,6 +105,24 @@ export async function fetchActivity(sb: SB, userId: string, limit = 50): Promise
   return (data ?? []) as ActivityRow[];
 }
 
+// ── Web Push subscriptions ──────────────────────────────────────────────────
+export interface PushSubRow {
+  id: string; user_id: string; endpoint: string; p256dh: string; auth: string;
+}
+export async function savePushSub(
+  sb: SB, userId: string, sub: { endpoint: string; p256dh: string; auth: string },
+) {
+  await sb.from("push_subscriptions")
+    .upsert({ user_id: userId, ...sub }, { onConflict: "endpoint" });
+}
+export async function deletePushSub(sb: SB, endpoint: string) {
+  await sb.from("push_subscriptions").delete().eq("endpoint", endpoint);
+}
+export async function fetchPushSubs(sb: SB, userId: string): Promise<PushSubRow[]> {
+  const { data } = await sb.from("push_subscriptions").select("*").eq("user_id", userId);
+  return (data ?? []) as PushSubRow[];
+}
+
 // ── Résumé (stored as jsonb on the profile) ────────────────────────────────
 export async function fetchResume(sb: SB, userId: string): Promise<Resume> {
   const p = await fetchProfile(sb, userId);

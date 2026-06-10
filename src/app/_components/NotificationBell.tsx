@@ -26,6 +26,37 @@ const META: Record<string, { Icon: typeof Send; tint: string }> = {
 
 const SEEN_KEY = "featers:notifsSeenAt";
 
+// VAPID public keys are URL-safe base64; the Push API wants a Uint8Array.
+function urlBase64ToUint8Array(base64: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(b64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+// Register (or reuse) this device's push subscription and save it server-side.
+async function subscribePush(): Promise<void> {
+  const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!vapid || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapid) as BufferSource,
+      });
+    }
+    await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sub),
+    });
+  } catch { /* push unsupported / blocked — fall back to in-app notifications */ }
+}
+
 function timeAgo(iso: string): string {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
   if (s < 60) return `${s}s ago`;
@@ -54,7 +85,12 @@ export default function NotificationBell() {
     const s = Number(localStorage.getItem(SEEN_KEY) ?? 0);
     setSeenAt(s);
     notifiedAfter.current = Date.now();
-    if (typeof Notification !== "undefined") setPerm(Notification.permission);
+    if (typeof Notification !== "undefined") {
+      setPerm(Notification.permission);
+      // Already granted on a prior visit → make sure THIS device is subscribed
+      // (subscriptions are per browser/device and can be dropped by the browser).
+      if (Notification.permission === "granted") subscribePush();
+    }
   }, []);
 
   const refresh = useCallback(async () => {
@@ -108,6 +144,7 @@ export default function NotificationBell() {
     setPerm(p);
     if (p === "granted") {
       notifiedAfter.current = Date.now();
+      await subscribePush();   // register this device for background Web Push
       new Notification("Featers", {
         body: "Notifications are on — we'll alert you about new jobs and application updates.",
         icon: "/icon.svg",

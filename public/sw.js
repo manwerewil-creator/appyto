@@ -6,9 +6,40 @@
 // (which can be cached forever because their filename changes on every build).
 // It NEVER responds to navigations, /auth, /api, POSTs, or cross-origin
 // requests — those always hit the network, so the login flow can't regress.
-const CACHE = "featers-static-v4";
+const CACHE = "featers-static-v5";
 
 self.addEventListener("install", () => self.skipWaiting());
+
+// ── Web Push ────────────────────────────────────────────────────────────────
+// Show a notification when the push service delivers one (even with the app
+// closed). Payload is JSON: { title, body, url, tag }.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (_e) { /* ignore */ }
+  const title = data.title || "Featers";
+  const options = {
+    body: data.body || "",
+    icon: "/icon.svg",
+    badge: "/icon.svg",
+    tag: data.tag,
+    data: { url: data.url || "/" },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Focus an existing tab (or open one) at the notification's target URL.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const c of clients) {
+        if ("focus" in c) { c.navigate(target); return c.focus(); }
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
+});
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
