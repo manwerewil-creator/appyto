@@ -23,7 +23,6 @@ export default function ApplicationsPage() {
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Applications</h1>
           <p className="text-sm text-muted-foreground">Every send is logged here.</p>
         </div>
         {data && (

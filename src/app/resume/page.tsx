@@ -50,7 +50,6 @@ export default function ResumeBuilder() {
   if (!r) return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">CV Builder</h1>
         <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     </div>

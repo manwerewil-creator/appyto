@@ -91,7 +91,6 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">Connect the inbox Featers sends applications from.</p>
       </div>
 

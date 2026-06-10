@@ -68,7 +68,6 @@ export default function MatchesPage() {
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Matches</h1>
           <p className="text-sm text-muted-foreground">
             {data ? `${data.count.toLocaleString()} jobs match your profile` : "Scoring jobs…"}
           </p>
