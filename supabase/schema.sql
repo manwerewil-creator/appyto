@@ -1,22 +1,15 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- Appyto — PRODUCTION schema (multi-user, Google login, Paynow subscriptions)
--- Run in Supabase SQL editor or via the MCP migration. Safe to re-run.
+-- Run in the Supabase SQL editor. Fully idempotent and NON-destructive: every
+-- statement is create-if-not-exists / create-or-replace / on-conflict-do-update,
+-- so re-running it never drops a table or touches existing user data.
+--
+-- ⚠️ The app is LIVE with real users + payments. Do NOT add `drop table`/`drop
+-- schema` statements here. To restructure an existing table, write a targeted,
+-- reversible migration under supabase/migrations/ instead.
 -- ════════════════════════════════════════════════════════════════════════════
 
 create extension if not exists "pgcrypto";
-
--- ─── Fresh setup: drop any tables/objects from earlier schema versions ──────
--- The v1 schema used different column types (jobs.id uuid→text, plans missing
--- is_paid/sort, etc.). This makes the file fully re-runnable. SAFE during
--- initial setup — there is no real user data yet. Remove this block once live.
-drop view  if exists public.job_stats cascade;
-drop table if exists public.payments cascade;
-drop table if exists public.subscriptions cascade;
-drop table if exists public.applications cascade;
-drop table if exists public.send_credentials cascade;
-drop table if exists public.jobs cascade;
-drop table if exists public.profiles cascade;
-drop table if exists public.plans cascade;
 
 -- ─── Plans / tiers ──────────────────────────────────────────────────────────
 create table if not exists public.plans (
