@@ -66,7 +66,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5 px-2 py-1">
-      <Image src="/logo.png" alt="Featers" width={32} height={32} className="rounded-lg" priority />
+      <Image src="/icon.svg" alt="Featers" width={32} height={32} className="rounded-lg" priority />
       <span className="text-lg font-extrabold tracking-tight">Featers</span>
     </Link>
   );

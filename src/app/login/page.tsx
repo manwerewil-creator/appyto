@@ -117,7 +117,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-muted/40 via-background to-background px-4 py-12">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <img src="/logo.png" alt="" width={40} height={40} className="mb-2 rounded-lg" />
+          <img src="/icon.svg" alt="" width={40} height={40} className="mb-2 rounded-lg" />
           <CardTitle className="text-2xl">Featers</CardTitle>
           <CardDescription>
             {mode === "signin"
