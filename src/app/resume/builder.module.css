@@ -20,24 +20,9 @@
 
 .nav { display: flex; justify-content: space-between; margin-top: 4px; }
 
-/* ── Responsive builder layout ───────────────────────────────────────────────
-   The form + live-preview split keys off the CONTAINER width (not the viewport),
-   so the sidebar eating horizontal space can never crush the form into truncated
-   fields. Below the threshold it stacks to a single, full-width column. */
-.builder { container-type: inline-size; }
-.grid {
-  display: grid;
-  gap: 24px;
-  grid-template-columns: minmax(0, 1fr);   /* single column by default */
-  align-items: start;
-}
-@container (min-width: 880px) {
-  .grid { grid-template-columns: minmax(0, 1fr) clamp(300px, 34cqw, 420px); }
-  .preview { position: sticky; top: 84px; }
-}
-
-/* Live preview */
-.preview { position: static; min-width: 0; }
+/* Live preview. The form/preview split is decided in JS (measured width) on the
+   page itself — see resume/page.tsx — so it can never be crushed by the sidebar
+   or stray overflow the way a viewport breakpoint can. */
 .previewBar { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .tmplBtn { padding: 6px 11px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 .tmplBtnActive { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
@@ -68,8 +53,3 @@
 .photoBox { width: 96px; height: 96px; border: 1.5px dashed var(--border); border-radius: 10px; display: grid; place-items: center; cursor: pointer; overflow: hidden; color: var(--muted); font-size: 12px; text-align: center; }
 .photoBox img { width: 100%; height: 100%; object-fit: cover; }
 .swatch { width: 26px; height: 26px; border-radius: 6px; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--border); cursor: pointer; }
-
-@media (max-width: 980px) {
-  .layout { grid-template-columns: 1fr; }
-  .preview { position: static; }
-}

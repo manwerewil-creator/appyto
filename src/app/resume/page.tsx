@@ -32,8 +32,10 @@ export default function ResumeBuilder() {
   const [step, setStep] = useState(0);
   const [saved, setSaved] = useState(true);
   const [scale, setScale] = useState(0.53);   // A4 preview scale (fluid; set from measured width)
+  const [builderW, setBuilderW] = useState(0); // measured width of the builder area
   const t = useRef<ReturnType<typeof setTimeout>>();
   const roRef = useRef<ResizeObserver>();
+  const builderRoRef = useRef<ResizeObserver>();
 
   useEffect(() => { fetch("/api/resume").then((x) => x.json()).then(setR); }, []);
 
@@ -47,7 +49,22 @@ export default function ResumeBuilder() {
     roRef.current = new ResizeObserver(update);
     roRef.current.observe(node);
   }, []);
-  useEffect(() => () => roRef.current?.disconnect(), []);
+
+  // Measure the actual builder width and decide the layout in JS (not via a CSS
+  // breakpoint or container query) — this can't be defeated by the sidebar,
+  // zoom or any stray overflow, so the form is never squashed.
+  const builderCb = useCallback((node: HTMLDivElement | null) => {
+    builderRoRef.current?.disconnect();
+    if (!node) return;
+    const update = () => setBuilderW(node.clientWidth);
+    update();
+    builderRoRef.current = new ResizeObserver(update);
+    builderRoRef.current.observe(node);
+  }, []);
+  useEffect(() => () => { roRef.current?.disconnect(); builderRoRef.current?.disconnect(); }, []);
+
+  // Two columns only when there's genuinely room for a usable form + preview.
+  const twoCol = builderW >= 900;
 
   // Debounced autosave.
   useEffect(() => {
@@ -128,8 +145,11 @@ export default function ResumeBuilder() {
           })}
         </div>
 
-        <div className={cn("mt-6", b.builder)}>
-        <div className={b.grid}>
+        <div
+          ref={builderCb}
+          className="mt-6 grid items-start gap-6"
+          style={{ gridTemplateColumns: twoCol ? "minmax(0, 1fr) minmax(300px, 380px)" : "minmax(0, 1fr)" }}
+        >
           {/* ── Form column ── */}
           <div className="min-w-0 space-y-4">
             {step === 0 && (
@@ -349,7 +369,10 @@ export default function ResumeBuilder() {
           </div>
 
           {/* ── Live preview column — its own panel ── */}
-          <aside className={cn(b.preview, "rounded-2xl border bg-card p-4 shadow-sm")}>
+          <aside
+            className="min-w-0 rounded-2xl border bg-card p-4 shadow-sm"
+            style={twoCol ? { position: "sticky", top: 84 } : undefined}
+          >
             <div className="mb-3 flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold">Live preview</h3>
               <span className="text-xs text-muted-foreground">A4 · auto-saves</span>
@@ -363,7 +386,6 @@ export default function ResumeBuilder() {
               <div className={b.scaler} style={{ transform: `scale(${scale})` }}><ResumeSheet resume={r} /></div>
             </div>
           </aside>
-        </div>
         </div>
       </div>
 

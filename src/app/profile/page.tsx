@@ -240,12 +240,28 @@ export default function ProfilePage() {
             {/* Identity row — flat, no banner */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-center gap-4">
-                <UserAvatar
-                  src={avatar}
-                  name={p.full_name || authName}
-                  email={p.email || authEmail}
-                  className="h-20 w-20 shrink-0 text-2xl shadow-sm ring-1 ring-black/[0.06] sm:h-[88px] sm:w-[88px]"
-                />
+                {/* Avatar wrapped in a completion ring with a % badge */}
+                <div className="relative grid h-[88px] w-[88px] shrink-0 place-items-center">
+                  <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full -rotate-90" aria-hidden>
+                    <circle cx="50" cy="50" r="46" fill="none" stroke="hsl(var(--sb-muted))" strokeWidth="5" />
+                    <motion.circle
+                      cx="50" cy="50" r="46" fill="none" stroke="hsl(var(--sb-primary))" strokeWidth="5" strokeLinecap="round"
+                      strokeDasharray={2 * Math.PI * 46}
+                      initial={{ strokeDashoffset: (reduce ? (1 - completeness / 100) : 1) * 2 * Math.PI * 46 }}
+                      animate={{ strokeDashoffset: (1 - completeness / 100) * 2 * Math.PI * 46 }}
+                      transition={{ duration: reduce ? 0 : 0.9, ease: [0.2, 0.7, 0.2, 1] }}
+                    />
+                  </svg>
+                  <UserAvatar
+                    src={avatar}
+                    name={p.full_name || authName}
+                    email={p.email || authEmail}
+                    className="h-[72px] w-[72px] text-xl shadow-sm"
+                  />
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-[3px] text-[10px] font-bold leading-none text-primary-foreground shadow ring-2 ring-background">
+                    {completeness}%
+                  </span>
+                </div>
                 <div className="min-w-0 space-y-1">
                   <InlineEdit
                     value={p.full_name}
@@ -283,27 +299,13 @@ export default function ProfilePage() {
               </Button>
             </div>
 
-            {/* Profile strength — clean horizontal bar */}
-            <div className="space-y-4 rounded-2xl border bg-muted/30 p-4">
-              <div>
-                <div className="mb-1.5 flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold">Profile strength</p>
-                  <span className="text-sm font-bold tabular-nums text-primary">{completeness}%</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <motion.div
-                    className="h-full rounded-full bg-primary"
-                    initial={{ width: reduce ? `${completeness}%` : 0 }}
-                    animate={{ width: `${completeness}%` }}
-                    transition={{ duration: reduce ? 0 : 0.8, ease: [0.2, 0.7, 0.2, 1] }}
-                  />
-                </div>
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  {completeness < 100
-                    ? "Complete it for better matches and stronger applications."
-                    : "All set — your profile is complete. 🎉"}
-                </p>
-              </div>
+            {/* Profile strength — the % lives on the avatar ring; here just the stats */}
+            <div className="space-y-3 rounded-2xl border bg-muted/30 p-4">
+              <p className="text-xs text-muted-foreground">
+                {completeness < 100
+                  ? "Complete your profile for better matches and stronger applications."
+                  : "All set — your profile is complete. 🎉"}
+              </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <Stat icon={Target} label="Target roles" value={p.desired_titles.length || "—"} />
                 <Stat icon={MapPin} label="Locations" value={p.desired_locations.length || "Any"} />

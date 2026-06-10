@@ -168,23 +168,23 @@ function BottomNav() {
   const reduce = useReducedMotion();
   const activeIndex = Math.max(0, BOTTOM_NAV.findIndex(({ href }) => isActivePath(path, href)));
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-3 safe-bottom lg:hidden">
-      <nav className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-gradient-to-b from-[#4b5158] to-[#363b41] p-1.5 shadow-[0_14px_34px_-10px_rgba(0,0,0,0.55)] ring-1 ring-white/10">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-4 safe-bottom lg:hidden">
+      <nav className="pointer-events-auto flex w-full max-w-md items-center justify-between gap-1 rounded-[30px] bg-gradient-to-b from-[#4a515b] to-[#2e333a] px-2.5 py-2.5 shadow-[0_18px_44px_-12px_rgba(0,0,0,0.62)] ring-1 ring-white/10">
         {BOTTOM_NAV.map(({ href, label, Icon }, i) => {
           const active = i === activeIndex;
           return (
-            <Link key={href} href={href} aria-current={active ? "page" : undefined} aria-label={label}>
+            <Link key={href} href={href} aria-current={active ? "page" : undefined} aria-label={label} className="min-w-0">
               <motion.div
                 layout={!reduce}
-                transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 480, damping: 38 }}
+                transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 40 }}
                 className={cn(
                   "flex items-center justify-center gap-2 rounded-full transition-colors",
-                  active ? "bg-[#1d2126] px-4 py-2.5" : "px-3.5 py-2.5 hover:bg-white/5",
+                  active ? "bg-white px-5 py-3 shadow-md" : "px-4 py-3 active:bg-white/10",
                 )}
               >
                 <Icon
-                  className={cn("h-[22px] w-[22px] shrink-0", active ? "text-white" : "text-white/70")}
-                  strokeWidth={active ? 2.2 : 1.9}
+                  className={cn("h-[23px] w-[23px] shrink-0", active ? "text-[#2e333a]" : "text-white/75")}
+                  strokeWidth={active ? 2.4 : 1.9}
                 />
                 <AnimatePresence initial={false}>
                   {active && (
@@ -193,8 +193,8 @@ function BottomNav() {
                       initial={reduce ? { opacity: 0 } : { opacity: 0, width: 0 }}
                       animate={reduce ? { opacity: 1 } : { opacity: 1, width: "auto" }}
                       exit={reduce ? { opacity: 0 } : { opacity: 0, width: 0 }}
-                      transition={{ duration: reduce ? 0 : 0.2, ease: "easeOut" }}
-                      className="overflow-hidden whitespace-nowrap text-sm font-semibold text-white"
+                      transition={{ duration: reduce ? 0 : 0.22, ease: "easeOut" }}
+                      className="overflow-hidden whitespace-nowrap text-[15px] font-bold tracking-tight text-[#2e333a]"
                     >
                       {label}
                     </motion.span>
