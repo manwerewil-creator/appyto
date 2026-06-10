@@ -5,12 +5,23 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Send } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Loader2, Send, Paperclip, FileText, FileArchive, Image as ImageIcon, Link2, Eye, Pencil } from "lucide-react";
 
 export interface ComposeJob { id: string; title: string; apply_email: string | null; }
 
-// A custom-email composer. Prefills the code-generated draft, but the user can
-// rewrite it completely before sending — their words, their call.
+interface Attachment { name: string; kind: string }
+interface LinkItem { label: string; url: string }
+
+// Pick an icon + colour for an attachment by file kind.
+function fileIcon(kind: string) {
+  if (kind === "zip" || kind === "rar" || kind === "7z") return { Icon: FileArchive, color: "text-emerald-600 bg-emerald-50" };
+  if (["png", "jpg", "jpeg", "gif", "webp"].includes(kind)) return { Icon: ImageIcon, color: "text-sky-600 bg-sky-50" };
+  return { Icon: FileText, color: "text-rose-600 bg-rose-50" };
+}
+
+// Email composer + preview. Defaults to a clean, modern preview of exactly what
+// gets sent; flip to Edit to rewrite the subject/body (their words, their call).
 export default function ComposeModal({
   job, onClose, onSent,
 }: {
@@ -18,9 +29,12 @@ export default function ComposeModal({
   onClose: () => void;
   onSent: () => void;
 }) {
+  const [mode, setMode] = useState<"preview" | "edit">("preview");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [reqs, setReqs] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [links, setLinks] = useState<LinkItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +46,8 @@ export default function ComposeModal({
         if (d.ok) {
           setSubject(d.subject);
           setBody(d.body);
+          setAttachments(d.attachments ?? []);
+          setLinks(d.links ?? []);
           const r = d.requirements ?? {};
           const labels: string[] = [];
           if (r.wantsCv) labels.push("CV");
@@ -59,79 +75,153 @@ export default function ComposeModal({
     if (d.ok) onSent(); else setError(d.reason ?? "Could not send.");
   };
 
+  const paragraphs = body.split(/\n{2,}/).filter((p) => p.trim());
+
   return (
     <Sheet open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-4 overflow-y-auto sm:max-w-xl"
-      >
-        <div className="space-y-1">
-          <h3 className="text-lg font-semibold tracking-tight">Write your email</h3>
-          <p className="text-sm text-muted-foreground">
-            Applying to <span className="font-medium text-foreground">{job.title}</span>
-          </p>
+      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-xl">
+        {/* Top bar */}
+        <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Your application</p>
+            <p className="truncate text-sm text-muted-foreground">
+              To <span className="font-medium text-foreground">{job.apply_email ?? "—"}</span>
+            </p>
+          </div>
+          {/* Preview / Edit segmented control */}
+          <div className="flex shrink-0 rounded-lg border bg-muted/40 p-0.5 text-sm">
+            <button
+              onClick={() => setMode("preview")}
+              className={cn("flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-colors",
+                mode === "preview" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            >
+              <Eye className="h-3.5 w-3.5" /> Preview
+            </button>
+            <button
+              onClick={() => setMode("edit")}
+              className={cn("flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-colors",
+                mode === "edit" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            >
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </button>
+          </div>
         </div>
 
         {loading ? (
-          <div className="flex items-center gap-2 py-12 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Preparing draft…
+          <div className="flex items-center gap-2 px-5 py-16 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Preparing your email…
           </div>
         ) : (
-          <div className="flex flex-1 flex-col gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="compose-to">To</Label>
-              <Input id="compose-to" value={job.apply_email ?? ""} disabled />
+          <div className="flex flex-1 flex-col">
+            <div className="flex-1 space-y-5 px-5 py-5">
+              {mode === "preview" ? (
+                <>
+                  {/* Headline = the job role, front and centre */}
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <h2 className="text-2xl font-extrabold leading-tight tracking-tight">
+                        Apply for {job.title}
+                      </h2>
+                      <span className="shrink-0 pt-1 text-xs text-muted-foreground">Just now</span>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground/70">Subject:</span> {subject}
+                    </p>
+                  </div>
+
+                  {reqs.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {reqs.map((r) => (
+                        <span key={r} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Body */}
+                  <div className="space-y-3 text-[15px] leading-relaxed text-foreground/90">
+                    {paragraphs.map((p, i) => (
+                      <p key={i} className="whitespace-pre-line">{p}</p>
+                    ))}
+                  </div>
+
+                  {/* Links that ride along */}
+                  {links.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">Links included</p>
+                      <div className="space-y-1.5">
+                        {links.map((l) => (
+                          <div key={l.url} className="flex items-center gap-2 text-sm">
+                            <Link2 className="h-4 w-4 shrink-0 text-primary" />
+                            <span className="font-medium">{l.label}:</span>
+                            <span className="truncate text-muted-foreground">{l.url}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Attachments, as file cards */}
+                  {attachments.length > 0 && (
+                    <div className="space-y-2 border-t pt-4">
+                      <p className="flex items-center gap-1.5 text-sm font-semibold">
+                        <Paperclip className="h-4 w-4" /> {attachments.length} {attachments.length === 1 ? "Attachment" : "Attachments"}
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {attachments.map((a) => {
+                          const { Icon, color } = fileIcon(a.kind);
+                          return (
+                            <div key={a.name} className="flex items-center gap-3 rounded-xl border bg-card p-3">
+                              <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg", color)}>
+                                <Icon className="h-5 w-5" />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{a.name}</p>
+                                <p className="text-xs uppercase text-muted-foreground">{a.kind}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="compose-to">To</Label>
+                    <Input id="compose-to" value={job.apply_email ?? ""} disabled />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="compose-subject">Subject</Label>
+                    <Input id="compose-subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="compose-body">Message (this is exactly what gets sent)</Label>
+                    <Textarea id="compose-body" rows={14} value={body} onChange={(e) => setBody(e.target.value)} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Your CV and saved documents are attached automatically; saved links are added at the end.
+                  </p>
+                </>
+              )}
             </div>
-            {reqs.length > 0 && (
-              <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5">
-                <p className="mb-1.5 text-xs font-semibold text-foreground">This employer asked for:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {reqs.map((r) => (
-                    <span key={r} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                      {r}
-                    </span>
-                  ))}
+
+            {/* Footer */}
+            <div className="sticky bottom-0 border-t bg-background/95 px-5 py-3 backdrop-blur">
+              {error && (
+                <div className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {error}
                 </div>
+              )}
+              <div className="flex items-center justify-between gap-2">
+                <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                <Button variant="success" size="lg" className="min-w-[180px]" onClick={send} disabled={sending || !job.apply_email}>
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Send application
+                </Button>
               </div>
-            )}
-            <div className="space-y-1.5">
-              <Label htmlFor="compose-subject">Subject</Label>
-              <Input
-                id="compose-subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="compose-body">
-                Message (edit freely — this is exactly what gets sent)
-              </Label>
-              <Textarea
-                id="compose-body"
-                rows={12}
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Your CV is attached automatically if you’ve uploaded one.
-            </p>
-            {error && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </div>
-            )}
-            <div className="mt-auto flex flex-wrap items-center justify-end gap-2 pt-2">
-              <Button variant="ghost" onClick={onClose}>Cancel</Button>
-              <Button variant="success" onClick={send} disabled={sending || !job.apply_email}>
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                Send application
-              </Button>
             </div>
           </div>
         )}

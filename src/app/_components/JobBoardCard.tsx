@@ -72,8 +72,8 @@ export default function JobBoardCard({ job, onApply, onPass, applying }: JobBoar
           </div>
 
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-lg font-bold leading-tight tracking-tight">{job.title}</h3>
-            <p className="truncate text-sm font-medium text-primary">{job.company ?? "Confidential company"}</p>
+            <h3 className="text-xl font-bold leading-tight tracking-tight line-clamp-2">{job.title}</h3>
+            <p className="mt-0.5 truncate text-sm font-medium text-primary">{job.company ?? "Confidential company"}</p>
           </div>
 
           {job.salary && (
@@ -128,12 +128,13 @@ export default function JobBoardCard({ job, onApply, onPass, applying }: JobBoar
         {!job.applied && (
           <Button
             variant="success"
-            className="flex-1 sm:flex-none sm:min-w-[140px]"
+            size="lg"
+            className="flex-1 font-semibold shadow-sm sm:flex-none sm:min-w-[160px]"
             disabled={!canApply || applying}
             title={canApply ? "Apply with your profile & CV" : "No application email on this posting yet"}
             onClick={() => onApply?.(job)}
           >
-            {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Heart className="h-4 w-4" /> Apply</>}
+            {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Heart className="h-4 w-4" /> Apply Now</>}
           </Button>
         )}
       </div>

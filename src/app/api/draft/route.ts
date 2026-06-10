@@ -23,5 +23,18 @@ export async function GET(req: NextRequest) {
 
   const { subject, body } = buildEmail(job, profile ?? {});
   const requirements = detectRequirements(job);
-  return NextResponse.json({ ok: true, subject, body, to: job.apply_email, requirements });
+
+  // What will physically ride along with the email, so the preview can show it.
+  const attachments: { name: string; kind: string }[] = [];
+  const kindOf = (n: string) => (n.split(".").pop() || "file").toLowerCase();
+  if (profile?.cv_path) {
+    const name = profile.cv_path.split("/").pop() || "CV.pdf";
+    attachments.push({ name, kind: kindOf(name) });
+  }
+  for (const f of profile?.resource_files ?? []) {
+    attachments.push({ name: f.name, kind: kindOf(f.name) });
+  }
+  const links = profile?.resources ?? [];
+
+  return NextResponse.json({ ok: true, subject, body, to: job.apply_email, requirements, attachments, links });
 }
