@@ -4,16 +4,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[.97] active:translate-y-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[.98]",
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-b from-primary to-primary/88 text-primary-foreground shadow-sm shadow-primary/25 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 hover:brightness-[1.05]",
-        destructive: "bg-gradient-to-b from-destructive to-destructive/90 text-destructive-foreground shadow-sm shadow-destructive/25 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-destructive/30 hover:brightness-[1.05]",
-        outline: "border border-input bg-background shadow-sm hover:-translate-y-0.5 hover:border-primary/40 hover:bg-accent hover:text-accent-foreground hover:shadow-md",
-        secondary: "bg-secondary text-secondary-foreground shadow-sm hover:-translate-y-0.5 hover:bg-secondary/70 hover:shadow-md",
+        // Solid, flat fills — no gradients, no hover lift. Clean and stable.
+        default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        outline: "border border-input bg-background text-foreground shadow-sm hover:border-primary/50 hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        success: "bg-gradient-to-b from-success to-success/88 text-success-foreground shadow-sm shadow-success/25 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-success/30 hover:brightness-[1.05]",
+        success: "bg-success text-success-foreground shadow-sm hover:bg-success/90",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

@@ -87,7 +87,21 @@ export default function Overview() {
         className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-blue-600 to-indigo-600 p-6 text-white shadow-lg sm:p-8"
       >
         <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:20px_20px]" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+
+        {/* Job image on the right, fading out toward the left into the card. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/job-bsk.jpg"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 hidden h-full w-3/5 object-cover object-center md:block"
+          style={{
+            maskImage: "linear-gradient(to right, transparent 0%, #000 55%)",
+            WebkitMaskImage: "linear-gradient(to right, transparent 0%, #000 55%)",
+          }}
+        />
+
+        <div className="relative z-10 max-w-xl space-y-5">
           <div className="space-y-1.5">
             <p className="text-sm font-medium text-white/80">
               {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
@@ -97,14 +111,14 @@ export default function Overview() {
               {s ? `${fmt(s.matches)} jobs match your profile right now.` : "Loading your latest matches…"}
             </p>
           </div>
-          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button asChild size="lg" className="bg-white font-semibold text-primary shadow-md hover:bg-white/90">
               <Link href="/matches">
                 <Sparkles className="h-4 w-4" /> View my matches <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             {s && (
-              <div className="w-full sm:w-56">
+              <div className="w-full sm:max-w-[14rem]">
                 <div className="flex justify-between text-xs text-white/80">
                   <span>Applied today</span>
                   <span className="tabular-nums">{s.appliedToday}/{s.dailyCap}</span>

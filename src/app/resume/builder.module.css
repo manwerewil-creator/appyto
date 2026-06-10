@@ -26,10 +26,16 @@
 .tmplBtn { padding: 6px 11px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 .tmplBtnActive { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
 .frame {
-  width: 397px; height: 561px; overflow: hidden; border: 1px solid var(--border);
-  border-radius: 8px; box-shadow: var(--shadow); background: #fff;
+  width: 516px; height: 730px; overflow: hidden; border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 8px 30px -12px rgba(16,24,40,.18); background: #fff;
+  margin-inline: auto;
 }
-.scaler { width: 210mm; transform: scale(0.5); transform-origin: top left; }
+.scaler { width: 210mm; transform: scale(0.65); transform-origin: top left; }
+
+@media (max-width: 640px) {
+  .frame { width: 300px; height: 425px; }
+  .scaler { transform: scale(0.378); }
+}
 .photoBox { width: 96px; height: 96px; border: 1.5px dashed var(--border); border-radius: 10px; display: grid; place-items: center; cursor: pointer; overflow: hidden; color: var(--muted); font-size: 12px; text-align: center; }
 .photoBox img { width: 100%; height: 100%; object-fit: cover; }
 .swatch { width: 26px; height: 26px; border-radius: 6px; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--border); cursor: pointer; }

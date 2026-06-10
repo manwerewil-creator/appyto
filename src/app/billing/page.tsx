@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Crown, Loader2, Sparkles } from "lucide-react";
+import { Check, Crown, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { PAID_PLANS, PlanId } from "@/lib/plans";
@@ -42,89 +41,93 @@ export default function BillingPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Upgrade</h1>
-        <p className="text-sm text-muted-foreground">Pick a plan that matches how hard you're job-hunting.</p>
+    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      {/* Intro */}
+      <div className="mx-auto max-w-2xl space-y-2 text-center">
+        <h1 className="text-3xl font-extrabold tracking-tight">Pick your plan</h1>
+        <p className="text-sm text-muted-foreground">
+          Free stays free forever. Paid plans simply raise your daily auto-apply cap. Cancel anytime.
+        </p>
       </div>
 
       {error && (
-        <Card className="border-destructive/40 bg-destructive/10">
-          <CardContent className="p-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
+        <div className="mx-auto max-w-2xl rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-center text-sm text-destructive">
+          {error}
+        </div>
       )}
 
-      <p className="text-sm text-muted-foreground">
-        Free and Free+ stay free forever — Free+ even auto-applies 5/day with your own key.
-        Paid plans simply raise your daily auto-apply cap. No refunds on partial months, cancel anytime.
-      </p>
-
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Tiles */}
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {PAID_PLANS.map((plan) => {
           const isCurrent = currentPlan === plan.id;
           const isFeatured = plan.id === "pro";
           return (
-            <Card
+            <div
               key={plan.id}
               className={cn(
-                "relative flex flex-col",
-                isFeatured && "ring-2 ring-primary shadow-md",
+                "relative flex flex-col rounded-2xl border bg-card p-6 transition-shadow",
+                isFeatured
+                  ? "border-primary/40 shadow-lg ring-1 ring-primary/30 lg:-mt-3 lg:mb-3"
+                  : "border-border/70 shadow-sm hover:shadow-md",
               )}
             >
               {isFeatured && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Sparkles className="h-3 w-3" />
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm">
                   Most popular
-                </Badge>
+                </span>
               )}
-              <CardHeader>
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="flex items-center gap-2">
-                    {isFeatured && <Crown className="h-4 w-4 text-primary" />}
-                    {plan.name}
-                  </CardTitle>
-                  {isCurrent && <Badge variant="success">Current</Badge>}
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isFeatured && <Crown className="h-5 w-5 text-amber-500" />}
+                  <span className="text-lg font-bold">{plan.name}</span>
                 </div>
-                <div className="pt-2">
-                  <span className="text-4xl font-bold tracking-tight">${plan.priceUsd}</span>
-                  <span className="text-sm text-muted-foreground"> /month</span>
-                </div>
-                <CardDescription>{plan.blurb}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <ul className="space-y-2.5">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <Button
-                  className="w-full"
-                  variant={isFeatured && !isCurrent ? "default" : "outline"}
-                  disabled={busy !== null || isCurrent}
-                  onClick={() => upgrade(plan.id)}
-                >
-                  {busy === plan.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : isCurrent ? (
-                    "Your plan"
-                  ) : (
-                    `Upgrade to ${plan.name}`
-                  )}
-                </Button>
-              </CardFooter>
-            </Card>
+                {isCurrent && <Badge variant="success">Current</Badge>}
+              </div>
+
+              <div className="mt-4 flex items-end gap-1">
+                <span className="text-4xl font-extrabold tracking-tight">${plan.priceUsd}</span>
+                <span className="pb-1 text-sm text-muted-foreground">/month</span>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">{plan.blurb}</p>
+
+              <div className="my-5 h-px bg-border" />
+
+              <ul className="flex-1 space-y-3">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm">
+                    <span className={cn("mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full",
+                      isFeatured ? "bg-primary/15 text-primary" : "bg-emerald-100 text-emerald-600")}>
+                      <Check className="h-3 w-3" strokeWidth={3} />
+                    </span>
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                className="mt-6 w-full"
+                variant={isFeatured && !isCurrent ? "default" : "outline"}
+                disabled={busy !== null || isCurrent}
+                onClick={() => upgrade(plan.id)}
+              >
+                {busy === plan.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isCurrent ? (
+                  "Your plan"
+                ) : (
+                  `Choose ${plan.name}`
+                )}
+              </Button>
+            </div>
           );
         })}
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Payments are handled by Paynow (EcoCash, OneMoney, Visa/Mastercard). You'll be redirected to pay securely,
-        then brought back here once it's confirmed.
+      {/* Trust line — no provider names */}
+      <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs text-muted-foreground">
+        <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+        Secure payment · Pay with EcoCash, OneMoney or card · Cancel anytime
       </p>
     </div>
   );

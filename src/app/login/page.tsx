@@ -130,7 +130,7 @@ export default function LoginPage() {
       >
       <Card className="w-full">
         <CardHeader className="items-center text-center">
-          <img src="/icon.svg" alt="" width={40} height={40} className="mb-2 rounded-lg" />
+          <img src="/logo.png" alt="Featers" width={56} height={56} className="mb-2" />
           <CardTitle className="text-2xl">Featers</CardTitle>
           <CardDescription>
             {mode === "signin"

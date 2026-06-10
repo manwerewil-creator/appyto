@@ -6,7 +6,7 @@
 // (which can be cached forever because their filename changes on every build).
 // It NEVER responds to navigations, /auth, /api, POSTs, or cross-origin
 // requests — those always hit the network, so the login flow can't regress.
-const CACHE = "featers-static-v5";
+const CACHE = "featers-static-v6";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -19,8 +19,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Featers";
   const options = {
     body: data.body || "",
-    icon: "/icon.svg",
-    badge: "/icon.svg",
+    icon: "/logo.png",
+    badge: "/logo.png",
     tag: data.tag,
     data: { url: data.url || "/" },
   };

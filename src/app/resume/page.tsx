@@ -74,11 +74,8 @@ export default function ResumeBuilder() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between no-print">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">CV Builder</h1>
-          <p className="text-sm text-muted-foreground">Build a professional CV from code — no templates to buy</p>
-        </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between no-print">
+        <p className="text-sm text-muted-foreground">Build a professional CV that employers take seriously.</p>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm text-muted-foreground">{saved ? "Saved ✓" : "Saving…"}</span>
           <Button onClick={() => window.print()}>
@@ -118,7 +115,7 @@ export default function ResumeBuilder() {
           })}
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_minmax(0,420px)]">
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,560px)]">
           {/* ── Form column ── */}
           <div className="space-y-4">
             {step === 0 && (
@@ -337,8 +334,12 @@ export default function ResumeBuilder() {
             </div>
           </div>
 
-          {/* ── Live preview column ── */}
-          <aside className={b.preview}>
+          {/* ── Live preview column — its own panel ── */}
+          <aside className={cn(b.preview, "rounded-2xl border bg-card p-4 shadow-sm")}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">Live preview</h3>
+              <span className="text-xs text-muted-foreground">A4 · auto-saves</span>
+            </div>
             <div className={b.previewBar}>
               {TEMPLATES.map((tp) => (
                 <button key={tp.id} className={`${b.tmplBtn} ${r.template === tp.id ? b.tmplBtnActive : ""}`} onClick={() => set("template", tp.id)}>{tp.name}</button>
@@ -347,7 +348,6 @@ export default function ResumeBuilder() {
             <div className={b.frame}>
               <div className={b.scaler}><ResumeSheet resume={r} /></div>
             </div>
-            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>Live preview · A4 · scaled to 50%</p>
           </aside>
         </div>
       </div>

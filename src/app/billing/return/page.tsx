@@ -80,7 +80,7 @@ export default function BillingReturnPage() {
             <CardHeader className="items-center space-y-3">
               <CardTitle>Awaiting confirmation…</CardTitle>
               <CardDescription>
-                We haven't seen Paynow confirm this payment yet. If you completed it, your plan will update
+                We haven't confirmed this payment yet. If you completed it, your plan will update
                 automatically within a few minutes — no need to pay again.
               </CardDescription>
             </CardHeader>
@@ -95,7 +95,7 @@ export default function BillingReturnPage() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <div className="space-y-1">
               <p className="font-medium">Confirming your payment…</p>
-              <p className="text-sm text-muted-foreground">Checking with Paynow…</p>
+              <p className="text-sm text-muted-foreground">This only takes a moment…</p>
             </div>
           </CardContent>
         )}

@@ -105,7 +105,7 @@ export default function NotificationBell() {
           .filter((e) => new Date(e.created_at).getTime() > notifiedAfter.current)
           .sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
         for (const e of fresh.slice(-5)) {
-          new Notification("Featers", { body: e.summary ?? e.type, icon: "/icon.svg", tag: e.id });
+          new Notification("Featers", { body: e.summary ?? e.type, icon: "/logo.png", tag: e.id });
         }
         if (evs.length) {
           notifiedAfter.current = Math.max(
@@ -147,7 +147,7 @@ export default function NotificationBell() {
       await subscribePush();   // register this device for background Web Push
       new Notification("Featers", {
         body: "Notifications are on — we'll alert you about new jobs and application updates.",
-        icon: "/icon.svg",
+        icon: "/logo.png",
       });
     }
   };

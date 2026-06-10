@@ -41,6 +41,21 @@ const BOTTOM_NAV = [
 const isActivePath = (path: string, href: string) =>
   href === "/" ? path === "/" : path.startsWith(href);
 
+// Section title shown in the top panel (brown), per route.
+const PAGE_TITLES: { match: string; title: string }[] = [
+  { match: "/jobs", title: "All Jobs" },
+  { match: "/matches", title: "My Matches" },
+  { match: "/quick-apply", title: "Quick Apply" },
+  { match: "/applications", title: "Applications" },
+  { match: "/resume", title: "CV Builder" },
+  { match: "/billing", title: "Upgrade" },
+  { match: "/settings", title: "Settings" },
+  { match: "/profile", title: "Profile" },
+  { match: "/onboarding", title: "Set up your profile" },
+];
+const titleFor = (path: string) =>
+  path === "/" ? "Overview" : (PAGE_TITLES.find((p) => path.startsWith(p.match))?.title ?? "Featers");
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = usePathname();
   return (
@@ -83,7 +98,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5 px-2 py-1">
-      <Image src="/icon.svg" alt="Featers" width={34} height={34} className="rounded-xl shadow-sm shadow-primary/20" priority />
+      <Image src="/logo.png" alt="Featers" width={34} height={34} priority />
       <span className="text-lg font-extrabold tracking-tight">Featers</span>
     </Link>
   );
@@ -198,10 +213,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   // Login / auth screens render without the app chrome.
   if (path === "/login" || path.startsWith("/auth")) return <>{children}</>;
+  const title = titleFor(path);
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col gap-1 border-r bg-gradient-to-b from-background to-muted/20 p-3 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-52 flex-col gap-1 border-r bg-gradient-to-b from-background to-muted/20 p-3 lg:flex">
         <Brand />
         <div className="my-1" />
         <NavLinks />
@@ -209,24 +225,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Content column (sits right of the desktop sidebar) */}
-      <div className="lg:pl-64">
-        {/* Top panel — shown on every page: nav drawer/brand on the left (mobile)
-            and the profile / notifications / settings actions on the right. */}
+      <div className="lg:pl-52">
+        {/* Top panel — shown on every page: hamburger (mobile) + the section
+            title (brown), and the profile / notifications / settings actions. */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md sm:px-4">
-          <div className="flex items-center gap-2 lg:hidden">
-            <Sheet open={open} onOpenChange={setOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Menu"><Menu className="h-5 w-5" /></Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="flex w-72 flex-col gap-1 p-3">
-                <Brand />
-                <div className="my-1" />
-                <NavLinks onNavigate={() => setOpen(false)} />
-                <UserFooter />
-              </SheetContent>
-            </Sheet>
-            <Brand />
-          </div>
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Menu" className="lg:hidden"><Menu className="h-5 w-5" /></Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex w-72 flex-col gap-1 p-3">
+              <Brand />
+              <div className="my-1" />
+              <NavLinks onNavigate={() => setOpen(false)} />
+              <UserFooter />
+            </SheetContent>
+          </Sheet>
+
+          <h1 className="truncate text-base font-bold tracking-tight text-[#7c4a21] sm:text-lg">{title}</h1>
 
           <TopBarActions />
         </header>
