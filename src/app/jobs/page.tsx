@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
+import { AnimatePresence } from "framer-motion";
 import JobBoardCard from "../_components/JobBoardCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -127,16 +128,18 @@ export default function JobsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {visible.map((j, i) => (
-            <JobBoardCard
-              key={j.id}
-              job={{ ...j, applied: appliedIds.has(j.id) }}
-              index={i}
-              onApply={applyOne}
-              onPass={passOne}
-              applying={applyingId === j.id}
-            />
-          ))}
+          <AnimatePresence initial={false}>
+            {visible.map((j, i) => (
+              <JobBoardCard
+                key={j.id}
+                job={{ ...j, applied: appliedIds.has(j.id) }}
+                index={i}
+                onApply={applyOne}
+                onPass={passOne}
+                applying={applyingId === j.id}
+              />
+            ))}
+          </AnimatePresence>
         </div>
       )}
 

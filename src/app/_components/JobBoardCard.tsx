@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import type { Job } from "@/lib/types";
 import { jobLogo } from "@/lib/logo";
 import { Button } from "@/components/ui/button";
@@ -37,9 +38,9 @@ function postedLabel(iso: string | null): string {
   return `Posted ${Math.floor(day / 30)}mo ago`;
 }
 
-export default function JobBoardCard({ job, onApply, onPass, applying }: JobBoardCardProps) {
-  const [passed, setPassed] = useState(false);
+export default function JobBoardCard({ job, index = 0, onApply, onPass, applying }: JobBoardCardProps) {
   const [imgOk, setImgOk] = useState(true);
+  const reduce = useReducedMotion();
   const { initials, color } = monogram(job.company);
   const logo = imgOk ? jobLogo(job) : null;
 
@@ -52,12 +53,19 @@ export default function JobBoardCard({ job, onApply, onPass, applying }: JobBoar
 
   const canApply = !!job.apply_email;
 
-  const handlePass = () => { setPassed(true); onPass?.(job); };
-
-  if (passed) return null;
+  // Pass removes the card from the parent list; AnimatePresence plays the exit.
+  const handlePass = () => onPass?.(job);
 
   return (
-    <div className="group overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
+    <motion.div
+      layout
+      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={reduce ? { opacity: 0 } : { opacity: 0, x: -60, transition: { duration: 0.2 } }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: reduce ? 0 : Math.min(index, 8) * 0.05 }}
+      whileHover={reduce ? undefined : { y: -3 }}
+      className="group overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-shadow hover:border-primary/40 hover:shadow-md"
+    >
       <div className="p-5">
         {/* Header */}
         <div className="flex items-start gap-4">
@@ -138,6 +146,6 @@ export default function JobBoardCard({ job, onApply, onPass, applying }: JobBoar
           </Button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

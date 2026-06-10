@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import {
-  Briefcase, Building2, Target, Mail, Send, CheckCircle2, Circle, ArrowRight, Sparkles,
+  Briefcase, Building2, Target, Mail, Send, CheckCircle2, Circle, ArrowRight,
+  Sparkles, Zap, Wand2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useUser } from "@/lib/use-user";
 import ActivityFeed from "./_components/ActivityFeed";
 
 interface Stats {
@@ -19,16 +22,50 @@ interface Stats {
 
 const fmt = (n: number) => n.toLocaleString();
 
+// Smooth count-up for stat numbers. Respects reduced-motion (renders instantly).
+function Counter({ value }: { value: number }) {
+  const reduce = useReducedMotion();
+  const [n, setN] = useState(reduce ? value : 0);
+  useEffect(() => {
+    if (reduce) { setN(value); return; }
+    let raf = 0;
+    const start = performance.now();
+    const dur = 700;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / dur);
+      setN(Math.round(value * (1 - Math.pow(1 - p, 3)))); // ease-out cubic
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, reduce]);
+  return <>{fmt(n)}</>;
+}
+
 export default function Overview() {
   const [s, setS] = useState<Stats | null>(null);
+  const { name } = useUser();
+  const reduce = useReducedMotion();
+
   useEffect(() => { fetch("/api/stats").then((r) => r.json()).then(setS).catch(() => {}); }, []);
 
+  const firstName = (name ?? "").trim().split(/\s+/)[0];
+
+  // Entrance: gentle stagger + fade/slide. transform/opacity only (no layout thrash).
+  const container: Variants = {
+    hidden: {},
+    show: { transition: { staggerChildren: reduce ? 0 : 0.06, delayChildren: 0.04 } },
+  };
+  const item: Variants = {
+    hidden: reduce ? { opacity: 0 } : { opacity: 0, y: 14 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+  };
+
   const stats = s ? [
-    { label: "Open jobs", value: fmt(s.openJobs), Icon: Briefcase, tint: "text-blue-600 bg-blue-50" },
-    { label: "Companies hiring", value: fmt(s.companies), Icon: Building2, tint: "text-violet-600 bg-violet-50" },
-    { label: "Match your profile", value: fmt(s.matches), Icon: Target, tint: "text-emerald-600 bg-emerald-50" },
-    { label: "Apply by email", value: fmt(s.withEmail), Icon: Mail, tint: "text-amber-600 bg-amber-50" },
-    { label: "Applied today", value: `${s.appliedToday}/${s.dailyCap}`, Icon: Send, tint: "text-rose-600 bg-rose-50" },
+    { label: "Open jobs", value: s.openJobs, Icon: Briefcase, tint: "text-blue-600 bg-blue-50" },
+    { label: "Companies hiring", value: s.companies, Icon: Building2, tint: "text-violet-600 bg-violet-50" },
+    { label: "Match your profile", value: s.matches, Icon: Target, tint: "text-emerald-600 bg-emerald-50" },
+    { label: "Apply by email", value: s.withEmail, Icon: Mail, tint: "text-amber-600 bg-amber-50" },
   ] : [];
 
   const checklist = s ? [
@@ -38,16 +75,57 @@ export default function Overview() {
   ] : [];
   const setupDone = checklist.filter((c) => c.done).length;
 
+  const todayPct = s && s.dailyCap > 0 ? Math.min(100, Math.round((s.appliedToday / s.dailyCap) * 100)) : 0;
+
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
-        <p className="text-sm text-muted-foreground">Your job-application command centre</p>
-      </div>
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <motion.div
+        initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-blue-600 to-indigo-600 p-6 text-white shadow-lg sm:p-8"
+      >
+        <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:20px_20px]" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-white/80">
+              {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
+            </p>
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Your job-search command centre</h1>
+            <p className="max-w-md text-sm text-white/80">
+              {s ? `${fmt(s.matches)} jobs match your profile right now.` : "Loading your latest matches…"}
+            </p>
+          </div>
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            <Button asChild size="lg" className="bg-white font-semibold text-primary shadow-md hover:bg-white/90">
+              <Link href="/matches">
+                <Sparkles className="h-4 w-4" /> View my matches <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+            {s && (
+              <div className="w-full sm:w-56">
+                <div className="flex justify-between text-xs text-white/80">
+                  <span>Applied today</span>
+                  <span className="tabular-nums">{s.appliedToday}/{s.dailyCap}</span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/25">
+                  <motion.div
+                    className="h-full rounded-full bg-white"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${todayPct}%` }}
+                    transition={{ duration: reduce ? 0 : 0.8, ease: "easeOut", delay: 0.2 }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
 
       {!s && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
         </div>
       )}
 
@@ -55,63 +133,123 @@ export default function Overview() {
         <Card><CardContent className="flex flex-col items-center gap-3 py-12 text-center">
           <Sparkles className="h-8 w-8 text-primary" />
           <h2 className="text-lg font-semibold">No jobs loaded yet</h2>
-          <p className="text-sm text-muted-foreground">Run the scraper (GitHub Actions) to fill your database.</p>
+          <p className="text-sm text-muted-foreground">Jobs will appear here as soon as the catalogue is populated.</p>
         </CardContent></Card>
       )}
 
       {s && s.totalJobs > 0 && (
         <>
-          {/* Stat cards */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {/* ── Stat cards (staggered) ───────────────────────────────────── */}
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          >
             {stats.map(({ label, value, Icon, tint }) => (
-              <Card key={label} className="transition-shadow hover:shadow-md">
-                <CardContent className="flex items-center gap-3 p-4">
-                  <div className={`grid h-10 w-10 place-items-center rounded-lg ${tint}`}><Icon className="h-5 w-5" /></div>
-                  <div className="min-w-0">
-                    <div className="text-xl font-bold tabular-nums leading-tight">{value}</div>
-                    <div className="truncate text-xs text-muted-foreground">{label}</div>
+              <motion.div
+                key={label}
+                variants={item}
+                whileHover={reduce ? undefined : { y: -4 }}
+                transition={{ type: "spring", stiffness: 300, damping: 22 }}
+              >
+                <Card className="h-full transition-shadow hover:shadow-md">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${tint}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-2xl font-bold tabular-nums leading-tight">
+                        <Counter value={value} />
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">{label}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="grid gap-6 lg:grid-cols-[1.4fr_1fr]"
+          >
+            {/* Setup checklist */}
+            <motion.div variants={item}>
+              <Card className="h-full">
+                <CardContent className="p-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="font-semibold">Get set up</h3>
+                    {setupDone === 3
+                      ? <Badge variant="success">Ready to apply</Badge>
+                      : <span className="text-sm tabular-nums text-muted-foreground">{setupDone}/3</span>}
+                  </div>
+                  {/* progress */}
+                  <div className="mb-4 h-2 overflow-hidden rounded-full bg-muted">
+                    <motion.div
+                      className="h-full rounded-full bg-primary"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(setupDone / 3) * 100}%` }}
+                      transition={{ duration: reduce ? 0 : 0.7, ease: "easeOut", delay: 0.2 }}
+                    />
+                  </div>
+                  <div className="divide-y">
+                    {checklist.map((c) => (
+                      <Link key={c.label} href={c.href}
+                        className="group flex items-center justify-between py-3 text-sm transition-colors hover:text-primary">
+                        <span className="flex items-center gap-2.5">
+                          {c.done
+                            ? <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                            : <Circle className="h-5 w-5 text-muted-foreground" />}
+                          {c.label}
+                        </span>
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          {c.done ? "Done" : "Set up"}
+                          {!c.done && <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                  <Button asChild className="mt-4 w-full sm:w-auto">
+                    <Link href="/matches">View my {fmt(s.matches)} matches <ArrowRight className="h-4 w-4" /></Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* How Featers works (sources hidden — feels like Featers serves them) */}
+            <motion.div variants={item}>
+              <Card className="h-full overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 via-background to-violet-50">
+                <CardContent className="p-5">
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
+                      <Wand2 className="h-4 w-4" />
+                    </span>
+                    <h3 className="font-semibold">How Featers works</h3>
+                  </div>
+                  <ol className="space-y-3 text-sm text-muted-foreground">
+                    <li className="flex gap-2.5">
+                      <span className="font-bold text-primary">1.</span>
+                      Featers gathers every open job across Zimbabwe into one place.
+                    </li>
+                    <li className="flex gap-2.5">
+                      <span className="font-bold text-primary">2.</span>
+                      Pure code ranks them against your profile, no guesswork.
+                    </li>
+                    <li className="flex gap-2.5">
+                      <span className="font-bold text-primary">3.</span>
+                      Our email engine writes and sends each application from your own inbox.
+                    </li>
+                  </ol>
+                  <div className="mt-4 flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary">
+                    <Zap className="h-3.5 w-3.5" /> A tool to apply faster, not a guarantee of a job.
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-            {/* Setup checklist */}
-            <Card>
-              <CardContent className="p-5">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-semibold">Setup ({setupDone}/3)</h3>
-                  {setupDone === 3 && <Badge variant="success">Ready to apply</Badge>}
-                </div>
-                <div className="divide-y">
-                  {checklist.map((c) => (
-                    <Link key={c.label} href={c.href} className="flex items-center justify-between py-3 text-sm hover:opacity-80">
-                      <span className="flex items-center gap-2.5">
-                        {c.done ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Circle className="h-5 w-5 text-muted-foreground" />}
-                        {c.label}
-                      </span>
-                      <span className="text-muted-foreground">{c.done ? "Done" : "Set up →"}</span>
-                    </Link>
-                  ))}
-                </div>
-                <Button asChild className="mt-4"><Link href="/matches">View my {fmt(s.matches)} matches <ArrowRight className="h-4 w-4" /></Link></Button>
-              </CardContent>
-            </Card>
-
-            {/* How it works */}
-            <Card className="bg-gradient-to-br from-primary/5 to-violet-50">
-              <CardContent className="p-5">
-                <h3 className="mb-3 font-semibold">How Featers works</h3>
-                <ol className="space-y-2.5 text-sm text-muted-foreground">
-                  <li className="flex gap-2"><span className="font-bold text-primary">1.</span> Scrapers pull every job from Jobs Zimbabwe + ApplyNOW.</li>
-                  <li className="flex gap-2"><span className="font-bold text-primary">2.</span> Pure code (no AI) ranks them against your profile.</li>
-                  <li className="flex gap-2"><span className="font-bold text-primary">3.</span> Featers emails your CV to employers from your own inbox.</li>
-                </ol>
-                <p className="mt-4 text-xs text-muted-foreground">A tool to apply faster — not a guarantee of a job.</p>
-              </CardContent>
-            </Card>
-          </div>
+            </motion.div>
+          </motion.div>
         </>
       )}
 
