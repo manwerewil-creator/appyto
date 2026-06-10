@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { PwaInstall } from "@/components/pwa-install";
+import NotificationBell from "@/app/_components/NotificationBell";
 import { cn } from "@/lib/utils";
 
 // Full navigation — used by the desktop sidebar and the mobile drawer.
@@ -157,24 +158,54 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <UserFooter />
       </aside>
 
-      {/* Mobile / tablet top bar (full nav via drawer) */}
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur lg:hidden">
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Menu"><Menu className="h-5 w-5" /></Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="flex w-72 flex-col gap-1 p-3">
+      {/* Content column (sits right of the desktop sidebar) */}
+      <div className="lg:pl-64">
+        {/* Top panel — shown on every page: nav drawer/brand on the left (mobile)
+            and the profile / notifications / settings actions on the right. */}
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur sm:px-4">
+          <div className="flex items-center gap-2 lg:hidden">
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Menu"><Menu className="h-5 w-5" /></Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="flex w-72 flex-col gap-1 p-3">
+                <Brand />
+                <div className="my-2" />
+                <NavLinks onNavigate={() => setOpen(false)} />
+                <UserFooter />
+              </SheetContent>
+            </Sheet>
             <Brand />
-            <div className="my-2" />
-            <NavLinks onNavigate={() => setOpen(false)} />
-            <UserFooter />
-          </SheetContent>
-        </Sheet>
-        <Brand />
-      </header>
+          </div>
 
-      {/* Main content — extra bottom padding on mobile so the floating bar never overlaps */}
-      <main className="pb-safe-nav lg:pl-64 lg:pb-0">{children}</main>
+          <div className="ml-auto flex items-center gap-1">
+            <NotificationBell />
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              className={cn(
+                "grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-accent hover:text-foreground",
+                isActivePath(path, "/settings") ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <Settings className="h-5 w-5" />
+            </Link>
+            <Link
+              href="/profile"
+              aria-label="Profile"
+              className={cn(
+                "grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-accent hover:text-foreground",
+                isActivePath(path, "/profile") ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <User className="h-5 w-5" />
+            </Link>
+          </div>
+        </header>
+
+        {/* Main content — extra bottom padding on mobile so the floating bar never overlaps */}
+        <main className="pb-safe-nav lg:pb-0">{children}</main>
+      </div>
 
       <BottomNav />
     </div>

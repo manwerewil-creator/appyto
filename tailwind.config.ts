@@ -7,7 +7,9 @@ const config: Config = {
     container: { center: true, padding: "1rem", screens: { "2xl": "1280px" } },
     extend: {
       fontFamily: {
-        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans:  ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        serif: ["var(--font-serif)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono:  ["var(--font-mono)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--sb-border))",
