@@ -17,8 +17,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   ChevronRight, UserRound, Mail, MailCheck, KeyRound, ShieldCheck, Zap,
-  SlidersHorizontal, Crown, LogOut, Check, X, Loader2,
+  SlidersHorizontal, Crown, LogOut, Check, X, Loader2, ExternalLink,
 } from "lucide-react";
+
+// Official Google pages for setting up an app password.
+const GMAIL_2SV = "https://myaccount.google.com/signinoptions/two-step-verification";
+const GMAIL_APP_PW = "https://myaccount.google.com/apppasswords";
 
 interface SettingsView {
   auth_method: "smtp" | "google";
@@ -51,12 +55,18 @@ export default function SettingsPage() {
   useEffect(() => {
     load();
     fetch("/api/profile").then((r) => r.json()).then(setProf).catch(() => {});
-    const g = new URLSearchParams(window.location.search).get("google");
+    const params = new URLSearchParams(window.location.search);
+    const g = params.get("google");
     if (g && GOOGLE_MSG[g]) {
       const m = GOOGLE_MSG[g];
       (m.ok ? toast.success : toast.error)(m.text);
       window.history.replaceState({}, "", "/settings");
       setOpen("email");
+    }
+    // Deep-link from onboarding: open the Email connect section straight away.
+    if (params.get("connect") === "email") {
+      setOpen("email");
+      window.history.replaceState({}, "", "/settings");
     }
   }, []);
 
@@ -227,6 +237,15 @@ export default function SettingsPage() {
                     <KeyRound className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
                     <span className="text-sm font-semibold">App password / SMTP</span>
                     {s.auth_method === "smtp" && s.smtp_verified && <Badge variant="success">Active</Badge>}
+                  </div>
+                  <div className="rounded-lg border bg-card p-3 text-xs leading-relaxed text-muted-foreground">
+                    <span className="font-semibold text-foreground">How to get a Gmail app password:</span>{" "}
+                    1) turn on{" "}
+                    <a href={GMAIL_2SV} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary underline underline-offset-2">2-Step Verification <ExternalLink className="h-3 w-3" /></a>,{" "}
+                    2) open{" "}
+                    <a href={GMAIL_APP_PW} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary underline underline-offset-2">App passwords <ExternalLink className="h-3 w-3" /></a>,{" "}
+                    3) choose <span className="font-medium text-foreground">Mail → Other</span>, name it <span className="font-medium text-foreground">Feasters</span>, tap Generate, and paste the 16-character code below.
+                    <span className="mt-1.5 block">Host <span className="font-medium text-foreground">smtp.gmail.com</span> · Port <span className="font-medium text-foreground">465</span> (or 587).</span>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">

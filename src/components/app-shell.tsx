@@ -30,10 +30,11 @@ const NAV: { href: string; label: string; Icon: LucideIcon; highlight?: boolean 
   { href: "/billing", label: "Upgrade", Icon: Crown, highlight: true },
 ];
 
-// The 4 essentials for the mobile/tablet liquid-glass bottom bar — the core
-// job-application loop: see your dashboard → matches → apply → track.
+// The core job-application loop for the mobile/tablet bottom bar:
+// dashboard → browse jobs → matches → apply → track.
 const BOTTOM_NAV = [
   { href: "/", label: "Home", Icon: Home },
+  { href: "/jobs", label: "Jobs", Icon: Briefcase },
   { href: "/matches", label: "Matches", Icon: Sparkles },
   { href: "/quick-apply", label: "Apply", Icon: Send },
   { href: "/applications", label: "Applied", Icon: ClipboardCheck },
@@ -169,7 +170,7 @@ function BottomNav() {
   const activeIndex = Math.max(0, BOTTOM_NAV.findIndex(({ href }) => isActivePath(path, href)));
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-4 safe-bottom lg:hidden">
-      <nav className="pointer-events-auto flex w-full max-w-md items-center justify-between gap-1 rounded-[30px] bg-gradient-to-b from-[#4a515b] to-[#2e333a] px-2.5 py-2.5 shadow-[0_18px_44px_-12px_rgba(0,0,0,0.62)] ring-1 ring-white/10">
+      <nav className="pointer-events-auto flex w-full max-w-md items-center justify-between gap-1 rounded-[30px] bg-[#2b2f36] px-2.5 py-2.5 shadow-[0_14px_36px_-14px_rgba(0,0,0,0.55)] ring-1 ring-white/10">
         {BOTTOM_NAV.map(({ href, label, Icon }, i) => {
           const active = i === activeIndex;
           return (
@@ -178,13 +179,13 @@ function BottomNav() {
                 layout={!reduce}
                 transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 40 }}
                 className={cn(
-                  "flex items-center justify-center gap-2 rounded-full transition-colors",
-                  active ? "bg-white px-5 py-3 shadow-md" : "px-4 py-3 active:bg-white/10",
+                  "flex items-center justify-center gap-1.5 rounded-full transition-colors",
+                  active ? "bg-white/12 px-3.5 py-2 shadow-sm" : "px-3 py-2 active:bg-white/10",
                 )}
               >
                 <Icon
-                  className={cn("h-[23px] w-[23px] shrink-0", active ? "text-[#2e333a]" : "text-white/75")}
-                  strokeWidth={active ? 2.4 : 1.9}
+                  className={cn("h-[18px] w-[18px] shrink-0", active ? "text-white" : "text-white/60")}
+                  strokeWidth={active ? 2.2 : 1.9}
                 />
                 <AnimatePresence initial={false}>
                   {active && (
@@ -194,7 +195,7 @@ function BottomNav() {
                       animate={reduce ? { opacity: 1 } : { opacity: 1, width: "auto" }}
                       exit={reduce ? { opacity: 0 } : { opacity: 0, width: 0 }}
                       transition={{ duration: reduce ? 0 : 0.22, ease: "easeOut" }}
-                      className="overflow-hidden whitespace-nowrap text-[15px] font-bold tracking-tight text-[#2e333a]"
+                      className="overflow-hidden whitespace-nowrap text-[12.5px] font-semibold tracking-tight text-white"
                     >
                       {label}
                     </motion.span>

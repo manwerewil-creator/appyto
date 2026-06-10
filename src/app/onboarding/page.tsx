@@ -9,8 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { ArrowRight, ChevronLeft, Check, Mail, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Check, Mail, Sparkles, Zap, KeyRound, ExternalLink, ShieldCheck } from "lucide-react";
+
+// Official Google pages for setting up an app password.
+const GMAIL_2SV = "https://myaccount.google.com/signinoptions/two-step-verification";
+const GMAIL_APP_PW = "https://myaccount.google.com/apppasswords";
 
 const STEPS = ["About you", "What you do", "Where & how", "Sending email", "Done"];
 const WORK_MODES = ["On-site (Zimbabwe)", "Remote", "Freelance", "Hybrid"];
@@ -23,6 +28,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [emailReady, setEmailReady] = useState(false);
   const [matchCount, setMatchCount] = useState<number | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);   // "App password" how-to
 
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then(setP);
@@ -180,7 +186,7 @@ export default function Onboarding() {
           <Card>
             <CardHeader>
               <CardTitle>Sending email</CardTitle>
-              <CardDescription>Applications send from your own inbox. Connect it once.</CardDescription>
+              <CardDescription>Applications are sent from your own inbox, so employers reply straight to you. Connect it once — pick whichever is easier.</CardDescription>
             </CardHeader>
             <CardContent>
               {emailReady ? (
@@ -188,13 +194,79 @@ export default function Onboarding() {
                   <Check className="h-4 w-4" /> Your email is connected
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="rounded-lg border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                    Not connected yet. You can do this now or later — auto-apply needs it.
+                <div className="space-y-4">
+                  {/* Option 1 — Gmail one-click */}
+                  <div className="rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                        <Zap className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="flex flex-wrap items-center gap-2 font-semibold">
+                          Connect Gmail in one click <Badge variant="success">Easiest</Badge>
+                        </p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                          Sign in with Google and allow &ldquo;send email&rdquo;. Nothing to copy or configure.
+                        </p>
+                        <Button asChild className="mt-3">
+                          <a href="/api/google/start"><span className="text-base font-bold">G</span> Continue with Google</a>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <Button asChild variant="outline">
-                    <a href="/settings"><Mail className="h-4 w-4" /> Connect my email <ArrowRight className="h-4 w-4" /></a>
-                  </Button>
+
+                  {/* Option 2 — App password / SMTP (with how-to) */}
+                  <div className="overflow-hidden rounded-xl border">
+                    <button type="button" onClick={() => setGuideOpen((o) => !o)} aria-expanded={guideOpen}
+                      className="flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-muted/50">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+                        <KeyRound className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">Or use a Gmail App Password (SMTP)</p>
+                        <p className="text-sm text-muted-foreground">Best if you&rsquo;d rather not sign in with Google. Takes ~2 minutes.</p>
+                      </div>
+                      <ChevronRight className={cn("mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform", guideOpen && "rotate-90")} />
+                    </button>
+
+                    {guideOpen && (
+                      <div className="space-y-4 border-t bg-muted/20 p-4">
+                        <ol className="space-y-3">
+                          {[
+                            <>Turn on <b>2-Step Verification</b> for your Google account (app passwords only appear once it&rsquo;s on).{" "}
+                              <a href={GMAIL_2SV} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2">Open 2-Step Verification <ExternalLink className="h-3 w-3" /></a></>,
+                            <>Go to <b>App passwords</b>.{" "}
+                              <a href={GMAIL_APP_PW} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2">Open App passwords <ExternalLink className="h-3 w-3" /></a></>,
+                            <>For app choose <b>Mail</b>, for device pick <b>Other (Custom name)</b>, type <b>Feasters</b>, then tap <b>Generate</b>.</>,
+                            <>Google shows a <b>16-character password</b> — copy it. The spaces don&rsquo;t matter.</>,
+                            <>Open <b>email settings</b> below and, under <b>App password / SMTP</b>, enter your Gmail address and paste the password, then tap <b>Test connection</b>.</>,
+                          ].map((node, i) => (
+                            <li key={i} className="flex gap-3">
+                              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i + 1}</span>
+                              <span className="text-sm leading-relaxed text-foreground">{node}</span>
+                            </li>
+                          ))}
+                        </ol>
+
+                        {/* Exact SMTP values */}
+                        <div className="rounded-lg border bg-card p-3">
+                          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-success" /> Gmail SMTP settings</p>
+                          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                            <dt className="text-muted-foreground">Host</dt><dd className="font-medium">smtp.gmail.com</dd>
+                            <dt className="text-muted-foreground">Port</dt><dd className="font-medium">465 (SSL) — or 587 (TLS)</dd>
+                            <dt className="text-muted-foreground">Username</dt><dd className="font-medium">your full Gmail address</dd>
+                            <dt className="text-muted-foreground">Password</dt><dd className="font-medium">the 16-character app password</dd>
+                          </dl>
+                        </div>
+
+                        <Button asChild variant="outline">
+                          <a href="/settings?connect=email"><Mail className="h-4 w-4" /> Open email settings to finish <ArrowRight className="h-4 w-4" /></a>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">You can skip this for now and connect later — auto-apply needs it before it can send.</p>
                 </div>
               )}
             </CardContent>
