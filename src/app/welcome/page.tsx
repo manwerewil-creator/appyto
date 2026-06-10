@@ -1,14 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 /**
  * First-touch "Get Started" screen — the screen unauthenticated users land on
- * before login / sign up. Mobile-first: a rounded hero image, a headline, a
- * short pitch, and a single green CTA into the auth flow (/login).
+ * before login / sign up. Mobile-first: a branded hero (Feasters logo + name),
+ * a headline, a short pitch, and a single green CTA into the auth flow (/login).
  */
 export default function WelcomePage() {
   const reduce = useReducedMotion();
@@ -22,19 +21,15 @@ export default function WelcomePage() {
     <div className="flex min-h-[100dvh] w-full justify-center bg-muted/50 px-3 py-3 sm:py-6">
       {/* Phone-width content card */}
       <div className="flex min-h-[100dvh] w-full max-w-md flex-col rounded-[28px] bg-background p-4 shadow-sm sm:min-h-0 sm:self-center sm:p-5 sm:shadow-xl">
-        {/* Hero image */}
+        {/* Branded hero — Feasters logo + name */}
         <motion.div
           {...(reduce ? {} : { initial: { opacity: 0, scale: 0.98 }, animate: { opacity: 1, scale: 1 }, transition: { duration: 0.5, ease: [0.2, 0.7, 0.2, 1] } })}
-          className="relative aspect-[4/5] w-full overflow-hidden rounded-[22px] bg-muted"
+          className="relative flex aspect-[4/5] w-full flex-col items-center justify-center gap-5 overflow-hidden rounded-[22px] bg-gradient-to-br from-primary/10 via-muted to-muted"
         >
-          <Image
-            src="/job-bsk.jpg"
-            alt="People at work on the job"
-            fill
-            priority
-            sizes="(max-width: 480px) 100vw, 448px"
-            className="object-cover"
-          />
+          <div className="absolute inset-0 opacity-[0.5] [background-image:radial-gradient(circle_at_1px_1px,hsl(var(--sb-primary)/0.08)_1px,transparent_0)] [background-size:18px_18px]" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Feasters" width={108} height={108} className="relative h-24 w-24 rounded-[28px] shadow-lg sm:h-28 sm:w-28" />
+          <span className="relative text-4xl font-extrabold tracking-tight text-foreground sm:text-[40px]">Feasters</span>
         </motion.div>
 
         {/* Copy + CTA */}
