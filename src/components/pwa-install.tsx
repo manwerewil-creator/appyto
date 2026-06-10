@@ -49,7 +49,7 @@ export function PwaInstall({ className, fullWidth }: { className?: string; fullW
     const onInstalled = () => {
       setInstalled(true);
       setDeferred(null);
-      toast.success("Featers installed", { description: "Open it any time from your home screen." });
+      toast.success("Feasters installed", { description: "Open it any time from your home screen." });
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
@@ -71,7 +71,7 @@ export function PwaInstall({ className, fullWidth }: { className?: string; fullW
       return;
     }
     // iOS: no prompt API — guide the user.
-    toast("Install Featers", {
+    toast("Install Feasters", {
       icon: <Share className="h-4 w-4" />,
       description: "Tap the Share button, then “Add to Home Screen”.",
       duration: 8000,

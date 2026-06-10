@@ -68,7 +68,7 @@ async function main() {
   const out: string[] = [
     "# 100 generated application emails",
     "",
-    "_Produced by Featers' algorithmic email engine (seeded spintax, no LLM). Same code path used to send._",
+    "_Produced by Feasters' algorithmic email engine (seeded spintax, no LLM). Same code path used to send._",
     "",
   ];
 

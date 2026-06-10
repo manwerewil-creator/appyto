@@ -19,10 +19,10 @@ interface SettingsView {
 }
 
 const GOOGLE_MSG: Record<string, { ok: boolean; text: string }> = {
-  connected: { ok: true, text: "Gmail connected! Featers can now send applications from your inbox." },
+  connected: { ok: true, text: "Gmail connected! Feasters can now send applications from your inbox." },
   notconfigured: { ok: false, text: "Google isn't configured on this server yet — set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in your env." },
   denied: { ok: false, text: "You declined the Google permission. Connect again to enable sending." },
-  norefresh: { ok: false, text: "Google didn't return a refresh token. Remove Featers from your Google account permissions and reconnect." },
+  norefresh: { ok: false, text: "Google didn't return a refresh token. Remove Feasters from your Google account permissions and reconnect." },
   error: { ok: false, text: "Something went wrong connecting Gmail. Try again." },
 };
 
@@ -91,7 +91,7 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div>
-        <p className="text-sm text-muted-foreground">Connect the inbox Featers sends applications from.</p>
+        <p className="text-sm text-muted-foreground">Connect the inbox Feasters sends applications from.</p>
       </div>
 
       {/* ── Status hero ──────────────────────────────────────────────────── */}
@@ -106,7 +106,7 @@ export default function SettingsPage() {
             <p className="truncate text-sm text-muted-foreground">
               {ready
                 ? <>Applications send via <span className="font-medium text-foreground">{activeAddr}</span> ({s.auth_method === "google" ? "Gmail" : "SMTP"}).</>
-                : "Featers sends each application from your own inbox — connect it below."}
+                : "Feasters sends each application from your own inbox — connect it below."}
             </p>
           </div>
           {ready
@@ -129,7 +129,7 @@ export default function SettingsPage() {
             {s.auth_method === "google" && s.google_connected && <Badge variant="success">Active</Badge>}
           </div>
           <CardDescription>
-            One click — sign in with Google and grant &ldquo;send email&rdquo;. No password stored; Featers sends via a secure token.
+            One click — sign in with Google and grant &ldquo;send email&rdquo;. No password stored; Feasters sends via a secure token.
           </CardDescription>
         </CardHeader>
         <CardContent>

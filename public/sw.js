@@ -16,7 +16,7 @@ self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (_e) { /* ignore */ }
-  const title = data.title || "Featers";
+  const title = data.title || "Feasters";
   const options = {
     body: data.body || "",
     icon: "/logo.png",

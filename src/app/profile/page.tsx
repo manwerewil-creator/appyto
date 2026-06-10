@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import ChipsInput from "../_components/ChipsInput";
 import type { Profile, ResourceLink, ResourceFile } from "@/lib/types";
@@ -11,20 +12,58 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   Check, Upload, Loader2, FileText, Plus, Trash2, Link2, Paperclip, X,
-  MapPin, Mail, Phone, UserRound, Target, PenLine,
+  MapPin, Mail, Phone, UserRound, Target, PenLine, Sparkles, type LucideIcon,
 } from "lucide-react";
 
 const LOCATIONS = ["Harare", "Bulawayo", "Mutare", "Gweru", "Kwekwe", "Masvingo", "Chitungwiza", "Remote"];
 const TYPES = ["Full Time", "Contract", "Part Time", "Internship", "Temporary"];
+
+/* ── Inline-editable text (looks like text, becomes an underlined field on hover/focus) ── */
+function InlineEdit({
+  value, onChange, placeholder, ariaLabel, className, icon: Icon, autoWidth,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  ariaLabel: string;
+  className?: string;
+  icon?: LucideIcon;
+  autoWidth?: boolean;
+}) {
+  const ch = Math.max((value || placeholder).length, 6);
+  return (
+    <span className="group/edit relative inline-flex max-w-full items-center gap-1.5">
+      {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-70" strokeWidth={1.75} />}
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={ariaLabel}
+        style={autoWidth ? { width: `${ch + 1}ch` } : undefined}
+        className={cn(
+          "min-w-0 max-w-full truncate rounded-sm border-b border-dashed border-transparent bg-transparent outline-none transition-colors",
+          "placeholder:text-current placeholder:opacity-50 hover:border-current/30 focus:border-current/70 focus:placeholder:opacity-0",
+          autoWidth ? "" : "w-full",
+          className,
+        )}
+      />
+      <PenLine className="pointer-events-none h-3 w-3 shrink-0 opacity-0 transition-opacity group-focus-within/edit:opacity-0 group-hover/edit:opacity-40" strokeWidth={2} />
+    </span>
+  );
+}
 
 export default function ProfilePage() {
   const { name: authName, email: authEmail, avatar } = useUser();
   const [p, setP] = useState<Profile | null>(null);
   const [catSuggest, setCatSuggest] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const reduce = useReducedMotion();
 
   // "Add resource link" draft row.
   const [newLink, setNewLink] = useState<ResourceLink>({ label: "", url: "" });
@@ -37,15 +76,28 @@ export default function ProfilePage() {
       .catch(() => {});
   }, []);
 
-  const set = <K extends keyof Profile>(k: K, v: Profile[K]) => { setP((prev) => prev ? { ...prev, [k]: v } : prev); setSaved(false); };
+  const set = <K extends keyof Profile>(k: K, v: Profile[K]) => {
+    setP((prev) => prev ? { ...prev, [k]: v } : prev);
+    setSaved(false); setDirty(true);
+  };
+
+  // Edit the primary (first) target role inline without losing the rest.
+  const setPrimaryTitle = (v: string) => {
+    if (!p) return;
+    const rest = p.desired_titles.slice(1);
+    const next = v.trim() ? [v, ...rest] : rest;
+    set("desired_titles", next);
+  };
 
   const save = async () => {
     if (!p) return;
+    setSaving(true);
     const res = await fetch("/api/profile", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p),
     });
+    setSaving(false);
     if (res.ok) {
-      setSaved(true);
+      setSaved(true); setDirty(false);
       toast.success("Profile saved", { description: "Your changes are live." });
     } else {
       toast.error("Could not save profile", { description: "Please try again." });
@@ -111,18 +163,12 @@ export default function ProfilePage() {
   if (!p) {
     return (
       <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <Skeleton className="h-56 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
         <Skeleton className="h-64 w-full rounded-2xl" />
         <Skeleton className="h-40 w-full rounded-2xl" />
       </div>
     );
   }
-
-  const SaveButton = ({ className }: { className?: string } = {}) => (
-    <Button onClick={save} variant={saved ? "success" : "default"} className={className}>
-      {saved ? <><Check className="h-4 w-4" /> Saved</> : "Save changes"}
-    </Button>
-  );
 
   // Profile strength — count the fields that meaningfully improve matching.
   const checks = [
@@ -133,157 +179,224 @@ export default function ProfilePage() {
   ];
   const completeness = Math.round((checks.filter(Boolean).length / checks.length) * 100);
 
-  const headline = p.desired_titles.length
-    ? p.desired_titles.slice(0, 3).join(" · ")
-    : "Add your target roles to get matched";
+  const extraTitles = p.desired_titles.slice(1);
   const locationLine = p.desired_locations.length ? p.desired_locations.join(", ") : "Open to anywhere";
 
-  const Stat = ({ label, value }: { label: string; value: ReactNode }) => (
-    <div className="rounded-xl border bg-background p-3 text-center">
-      <p className="text-xl font-bold tracking-tight">{value}</p>
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+  // ── Small presentational helpers ────────────────────────────────────────
+  const Section = ({
+    icon: Icon, title, desc, children, accent, index = 0,
+  }: {
+    icon: LucideIcon; title: string; desc: string; children: ReactNode; accent?: boolean; index?: number;
+  }) => (
+    <motion.div
+      initial={reduce ? false : { opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: reduce ? 0 : 0.05 + index * 0.05, ease: [0.2, 0.7, 0.2, 1] }}
+    >
+      <Card className={cn("overflow-hidden", accent && "border-primary/25")}>
+        <CardHeader className={cn(accent && "bg-gradient-to-r from-primary/[0.06] to-transparent")}>
+          <CardTitle className="flex items-center gap-2.5 text-base">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/15">
+              <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            </span>
+            {title}
+          </CardTitle>
+          <CardDescription className="pl-[46px]">{desc}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">{children}</CardContent>
+      </Card>
+    </motion.div>
+  );
+
+  const Field = ({ label, children }: { label: string; children: ReactNode }) => (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      {children}
     </div>
   );
 
-  const SectionIcon = ({ children }: { children: ReactNode }) => (
-    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">{children}</span>
+  // Circular profile-strength ring.
+  const R = 26, C = 2 * Math.PI * R;
+  const StrengthRing = (
+    <div className="relative grid h-[72px] w-[72px] shrink-0 place-items-center">
+      <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
+        <circle cx="32" cy="32" r={R} fill="none" stroke="hsl(var(--sb-muted))" strokeWidth="6" />
+        <motion.circle
+          cx="32" cy="32" r={R} fill="none" stroke="hsl(var(--sb-primary))" strokeWidth="6"
+          strokeLinecap="round" strokeDasharray={C}
+          initial={{ strokeDashoffset: reduce ? C - (completeness / 100) * C : C }}
+          animate={{ strokeDashoffset: C - (completeness / 100) * C }}
+          transition={{ duration: reduce ? 0 : 0.9, ease: [0.2, 0.7, 0.2, 1] }}
+        />
+      </svg>
+      <span className="absolute text-sm font-bold tracking-tight text-primary">{completeness}%</span>
+    </div>
+  );
+
+  const Stat = ({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) => (
+    <div className="flex items-center gap-3 rounded-xl border bg-background px-3 py-2.5">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+        <Icon className="h-4 w-4" strokeWidth={1.75} />
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold leading-tight tracking-tight">{value}</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      </div>
+    </div>
   );
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      {/* ── Hero header (LinkedIn/Upwork style) ──────────────────────────── */}
-      <Card className="overflow-hidden">
-        <div className="relative h-28 bg-gradient-to-r from-primary via-blue-600 to-indigo-600 sm:h-32">
-          <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:18px_18px]" />
-        </div>
-        <CardContent className="p-5 pt-0">
-          <div className="-mt-12 flex flex-col gap-4 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <UserAvatar
-                src={avatar}
-                name={p.full_name || authName}
-                email={p.email || authEmail}
-                className="h-24 w-24 border-4 border-background text-2xl shadow-xl sm:h-28 sm:w-28"
-              />
-              <div className="space-y-1.5 pb-1">
-                <h1 className="text-2xl font-bold tracking-tight">{p.full_name || authName || "Your name"}</h1>
-                <p className="text-sm font-semibold text-primary">{headline}</p>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                  <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" strokeWidth={1.75} /> {locationLine}</span>
-                  {p.email && <span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" strokeWidth={1.75} /> {p.email}</span>}
-                  {p.phone && <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" strokeWidth={1.75} /> {p.phone}</span>}
+    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 pb-28 sm:px-6 lg:px-8">
+      {/* ── Hero header — identity is editable inline here ──────────────────── */}
+      <motion.div
+        initial={reduce ? false : { opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.2, 0.7, 0.2, 1] }}
+      >
+        <Card className="overflow-hidden">
+          {/* Banner */}
+          <div className="relative h-28 bg-[linear-gradient(110deg,hsl(221_83%_53%),hsl(231_70%_55%)_45%,hsl(258_70%_56%))] sm:h-32">
+            <div className="absolute inset-0 opacity-[0.18] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:16px_16px]" />
+            <div className="absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/15 blur-2xl" />
+            <div className="absolute -bottom-20 left-12 h-44 w-44 rounded-full bg-indigo-300/20 blur-2xl" />
+            <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-inset ring-white/25 backdrop-blur-sm">
+              <Sparkles className="h-3 w-3" /> {completeness}% complete
+            </span>
+          </div>
+
+          <CardContent className="p-5 pt-0">
+            <div className="-mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <UserAvatar
+                  src={avatar}
+                  name={p.full_name || authName}
+                  email={p.email || authEmail}
+                  className="h-24 w-24 border-4 border-background text-2xl shadow-xl ring-1 ring-black/[0.06] sm:h-[104px] sm:w-[104px]"
+                />
+                <div className="min-w-0 space-y-1 pb-1">
+                  <InlineEdit
+                    value={p.full_name}
+                    onChange={(v) => set("full_name", v)}
+                    placeholder={authName || "Your name"}
+                    ariaLabel="Full name"
+                    className="text-2xl font-bold tracking-tight"
+                  />
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <InlineEdit
+                      value={p.desired_titles[0] ?? ""}
+                      onChange={setPrimaryTitle}
+                      placeholder="Add your role"
+                      ariaLabel="Primary role"
+                      autoWidth
+                      className="text-sm font-semibold text-primary"
+                    />
+                    {extraTitles.map((t) => (
+                      <span key={t} className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{t}</span>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-0.5 text-sm text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} /> {locationLine}
+                    </span>
+                    <InlineEdit
+                      value={p.email}
+                      onChange={(v) => set("email", v)}
+                      placeholder="add email"
+                      ariaLabel="Email"
+                      icon={Mail}
+                      autoWidth
+                      className="text-sm"
+                    />
+                    <InlineEdit
+                      value={p.phone}
+                      onChange={(v) => set("phone", v)}
+                      placeholder="add phone"
+                      ariaLabel="Phone"
+                      icon={Phone}
+                      autoWidth
+                      className="text-sm"
+                    />
+                  </div>
                 </div>
               </div>
+              <Button onClick={save} variant={saved && !dirty ? "success" : "default"} disabled={saving} className="shrink-0">
+                {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
+                  : saved && !dirty ? <><Check className="h-4 w-4" /> Saved</>
+                  : "Save changes"}
+              </Button>
             </div>
-            <SaveButton className="shrink-0" />
-          </div>
 
-          {/* Profile strength */}
-          <div className="mt-5 rounded-xl border bg-muted/30 p-4">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-semibold">Profile strength</span>
-              <span className="font-bold text-primary">{completeness}%</span>
+            {/* Strength ring + quick stats */}
+            <div className="mt-5 grid gap-3 rounded-2xl border bg-muted/30 p-4 sm:grid-cols-[auto_1fr]">
+              <div className="flex items-center gap-3.5">
+                {StrengthRing}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">Profile strength</p>
+                  <p className="text-xs text-muted-foreground">
+                    {completeness < 100
+                      ? "Complete it for better matches and stronger applications."
+                      : "All set — your profile is complete. 🎉"}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <Stat icon={Target} label="Target roles" value={p.desired_titles.length || "—"} />
+                <Stat icon={MapPin} label="Locations" value={p.desired_locations.length || "Any"} />
+                <Stat icon={FileText} label="CV" value={p.cv_filename ? "Ready" : "Missing"} />
+              </div>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-primary to-blue-400 transition-all duration-500"
-                style={{ width: `${completeness}%` }}
-              />
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {completeness < 100
-                ? "Complete your profile for better matches and stronger applications."
-                : "All set — your profile is complete. 🎉"}
-            </p>
-          </div>
-
-          {/* Quick stats */}
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <Stat label="Target roles" value={p.desired_titles.length} />
-            <Stat label="Locations" value={p.desired_locations.length || "Any"} />
-            <Stat label="CV" value={p.cv_filename ? "Ready" : "—"} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── About you ────────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2.5">
-            <SectionIcon><UserRound className="h-4 w-4" strokeWidth={1.75} /></SectionIcon>
-            About you
-          </CardTitle>
-          <CardDescription>How employers see you on applications.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="full_name">Full name</Label>
-              <Input id="full_name" value={p.full_name} onChange={(e) => set("full_name", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" value={p.phone} onChange={(e) => set("phone", e.target.value)} />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email (shown as reply-to on applications)</Label>
-            <Input id="email" value={p.email} onChange={(e) => set("email", e.target.value)} />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* ── What jobs you want ───────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2.5">
-            <SectionIcon><Target className="h-4 w-4" strokeWidth={1.75} /></SectionIcon>
-            What jobs you want
-          </CardTitle>
-          <CardDescription>Tune what we match and auto-apply to.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="space-y-1.5">
-            <Label>Desired roles / titles</Label>
-            <ChipsInput values={p.desired_titles} onChange={(v) => set("desired_titles", v)}
-              placeholder="e.g. Accountant, Driver, Sales Rep — Enter to add" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Categories</Label>
+      <Section index={0} icon={Target} title="What jobs you want" desc="Tune what we match and auto-apply to.">
+        <Field label="Desired roles / titles">
+          <ChipsInput values={p.desired_titles} onChange={(v) => set("desired_titles", v)}
+            placeholder="e.g. Accountant, Driver, Sales Rep — Enter to add" />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Categories">
             <ChipsInput values={p.desired_categories} onChange={(v) => set("desired_categories", v)}
               suggestions={catSuggest} placeholder="e.g. Finance, Logistics" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Locations</Label>
+          </Field>
+          <Field label="Locations">
             <ChipsInput values={p.desired_locations} onChange={(v) => set("desired_locations", v)}
               suggestions={LOCATIONS} placeholder="Leave empty for anywhere" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Job types</Label>
+          </Field>
+          <Field label="Job types">
             <ChipsInput values={p.desired_job_types} onChange={(v) => set("desired_job_types", v)}
               suggestions={TYPES} placeholder="e.g. Full Time" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Extra keywords</Label>
+          </Field>
+          <Field label="Extra keywords">
             <ChipsInput values={p.keywords} onChange={(v) => set("keywords", v)}
               placeholder="skills, tools, anything to boost matches" />
-          </div>
-        </CardContent>
-      </Card>
+          </Field>
+        </div>
+      </Section>
+
+      {/* ── Contact details (canonical, mirrors the hero) ─────────────────── */}
+      <Section index={1} icon={UserRound} title="Contact details" desc="How employers see and reply to you on applications.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Full name">
+            <Input value={p.full_name} onChange={(e) => set("full_name", e.target.value)} placeholder="Your name" />
+          </Field>
+          <Field label="Phone">
+            <Input value={p.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+263…" />
+          </Field>
+        </div>
+        <Field label="Email (shown as reply-to on applications)">
+          <Input type="email" value={p.email} onChange={(e) => set("email", e.target.value)} placeholder="you@example.com" />
+        </Field>
+      </Section>
 
       {/* ── CV ───────────────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2.5">
-            <SectionIcon><FileText className="h-4 w-4" strokeWidth={1.75} /></SectionIcon>
-            CV
-          </CardTitle>
-          <CardDescription>Attached to every application you send. PDF or Word, under 8MB.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 text-sm">
-            <span className={`grid h-9 w-9 place-items-center rounded-lg ${p.cv_filename ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-              <FileText className="h-4 w-4" strokeWidth={1.75} />
+      <Section index={2} icon={FileText} title="CV" desc="Attached to every application you send. PDF or Word, under 8MB.">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 text-sm">
+            <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl",
+              p.cv_filename ? "bg-success/10 text-success ring-1 ring-inset ring-success/20" : "bg-muted text-muted-foreground")}>
+              <FileText className="h-[18px] w-[18px]" strokeWidth={1.75} />
             </span>
             {p.cv_filename
               ? <span className="text-muted-foreground">Current: <span className="font-medium text-foreground">{p.cv_filename}</span></span>
@@ -295,119 +408,106 @@ export default function ProfilePage() {
               <input type="file" hidden accept=".pdf,.doc,.docx" onChange={(e) => e.target.files?.[0] && uploadCv(e.target.files[0])} />
             </label>
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
       {/* ── Extra application resources ──────────────────────────────────── */}
-      <Card className="overflow-hidden border-primary/20">
-        <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
-          <CardTitle className="flex items-center gap-2.5">
-            <SectionIcon><Paperclip className="h-4 w-4" strokeWidth={1.75} /></SectionIcon>
-            Extra resources for applications
-          </CardTitle>
-          <CardDescription>
-            Add portfolio / LinkedIn / GitHub links and supporting documents (certificates,
-            references, transcripts). These travel with your applications.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-6">
-          {/* Links */}
-          <div className="space-y-3">
-            <Label className="flex items-center gap-1.5 text-sm">
-              <Link2 className="h-4 w-4 text-muted-foreground" /> Links
-            </Label>
-
-            {p.resources.length > 0 ? (
-              <ul className="grid gap-2">
-                {p.resources.map((r, i) => (
-                  <li key={`${r.url}-${i}`} className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 px-3 py-2 transition-colors hover:border-primary/30">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{r.label}</p>
-                      <a href={r.url} target="_blank" rel="noreferrer" className="truncate text-xs text-primary underline-offset-4 hover:underline">{r.url}</a>
-                    </div>
-                    <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeLink(i)} title="Remove link">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="rounded-xl border border-dashed bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
-                No links yet — add your portfolio or LinkedIn below.
-              </p>
-            )}
-
-            <div className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
-              <Input placeholder="Label (e.g. Portfolio)" value={newLink.label}
-                onChange={(e) => setNewLink((n) => ({ ...n, label: e.target.value }))}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }} />
-              <Input placeholder="https://…" value={newLink.url}
-                onChange={(e) => setNewLink((n) => ({ ...n, url: e.target.value }))}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }} />
-              <Button type="button" variant="secondary" onClick={addLink}>
-                <Plus className="h-4 w-4" /> Add
-              </Button>
-            </div>
+      <Section index={3} accent icon={Paperclip} title="Extra resources for applications"
+        desc="Portfolio / LinkedIn / GitHub links and supporting documents (certificates, references, transcripts). These travel with your applications.">
+        {/* Links */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-1.5"><Link2 className="h-4 w-4 text-muted-foreground" /> Links</Label>
+          {p.resources.length > 0 ? (
+            <ul className="grid gap-2">
+              {p.resources.map((r, i) => (
+                <li key={`${r.url}-${i}`} className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 px-3 py-2 transition-colors hover:border-primary/30">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{r.label}</p>
+                    <a href={r.url} target="_blank" rel="noreferrer" className="truncate text-xs text-primary underline-offset-4 hover:underline">{r.url}</a>
+                  </div>
+                  <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeLink(i)} title="Remove link">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-xl border border-dashed bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
+              No links yet — add your portfolio or LinkedIn below.
+            </p>
+          )}
+          <div className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
+            <Input placeholder="Label (e.g. Portfolio)" value={newLink.label}
+              onChange={(e) => setNewLink((n) => ({ ...n, label: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }} />
+            <Input placeholder="https://…" value={newLink.url}
+              onChange={(e) => setNewLink((n) => ({ ...n, url: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }} />
+            <Button type="button" variant="secondary" onClick={addLink}><Plus className="h-4 w-4" /> Add</Button>
           </div>
+        </div>
 
-          {/* Files */}
-          <div className="space-y-3">
-            <Label className="flex items-center gap-1.5 text-sm">
-              <Paperclip className="h-4 w-4 text-muted-foreground" /> Documents
-            </Label>
-
-            {p.resource_files.length > 0 && (
-              <ul className="grid gap-2">
-                {p.resource_files.map((f) => (
-                  <li key={f.path} className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 px-3 py-2 transition-colors hover:border-primary/30">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <FileText className="h-4 w-4 shrink-0 text-primary" />
-                      <span className="truncate text-sm font-medium">{f.name}</span>
-                    </div>
-                    <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeResourceFile(f.path)} title="Remove document">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <Button asChild variant="outline" disabled={resUploading}>
-              <label className="cursor-pointer">
-                {resUploading
-                  ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</>
-                  : <><Upload className="h-4 w-4" /> Add document</>}
-                <input type="file" hidden accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                  onChange={(e) => e.target.files?.[0] && uploadResourceFile(e.target.files[0])} />
-              </label>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Files */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-1.5"><Paperclip className="h-4 w-4 text-muted-foreground" /> Documents</Label>
+          {p.resource_files.length > 0 && (
+            <ul className="grid gap-2">
+              {p.resource_files.map((f) => (
+                <li key={f.path} className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 px-3 py-2 transition-colors hover:border-primary/30">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <FileText className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="truncate text-sm font-medium">{f.name}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeResourceFile(f.path)} title="Remove document">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Button asChild variant="outline" disabled={resUploading}>
+            <label className="cursor-pointer">
+              {resUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</> : <><Upload className="h-4 w-4" /> Add document</>}
+              <input type="file" hidden accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                onChange={(e) => e.target.files?.[0] && uploadResourceFile(e.target.files[0])} />
+            </label>
+          </Button>
+        </div>
+      </Section>
 
       {/* ── Cover letter ─────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2.5">
-            <SectionIcon><PenLine className="h-4 w-4" strokeWidth={1.75} /></SectionIcon>
-            Cover letter
-          </CardTitle>
-          <CardDescription>Optional. Use {"{name}"}, {"{title}"}, {"{company}"} as placeholders. Leave blank to use a clean default.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <Textarea rows={7} value={p.cover_letter_template}
-            onChange={(e) => set("cover_letter_template", e.target.value)}
-            placeholder={"Optional. Use {name}, {title}, {company} as placeholders.\nLeave blank to use a clean default."} />
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="w-full max-w-[220px] space-y-1.5">
-              <Label htmlFor="daily_cap">Daily auto-apply limit</Label>
-              <Input id="daily_cap" type="number" min={0} max={500} value={p.daily_cap}
-                onChange={(e) => set("daily_cap", Number(e.target.value))} />
+      <Section index={4} icon={PenLine} title="Cover letter"
+        desc={`Optional. Use {name}, {title}, {company} as placeholders. Leave blank to use a clean default.`}>
+        <Textarea rows={7} value={p.cover_letter_template}
+          onChange={(e) => set("cover_letter_template", e.target.value)}
+          placeholder={"Optional. Use {name}, {title}, {company} as placeholders.\nLeave blank to use a clean default."} />
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <Field label="Daily auto-apply limit">
+            <Input className="max-w-[220px]" id="daily_cap" type="number" min={0} max={500} value={p.daily_cap}
+              onChange={(e) => set("daily_cap", Number(e.target.value))} />
+          </Field>
+        </div>
+      </Section>
+
+      {/* ── Sticky save bar — appears only when there are unsaved edits ────── */}
+      <AnimatePresence>
+        {dirty && (
+          <motion.div
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}
+            className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4 lg:bottom-6"
+          >
+            <div className="flex items-center gap-3 rounded-full border bg-background/90 py-2 pl-4 pr-2 shadow-lg backdrop-blur">
+              <span className="text-sm font-medium text-muted-foreground">You have unsaved changes</span>
+              <Button size="sm" onClick={save} disabled={saving} className="rounded-full">
+                {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</> : "Save changes"}
+              </Button>
             </div>
-            <SaveButton />
-          </div>
-        </CardContent>
-      </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

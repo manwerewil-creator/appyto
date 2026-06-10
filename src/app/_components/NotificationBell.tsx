@@ -105,7 +105,7 @@ export default function NotificationBell() {
           .filter((e) => new Date(e.created_at).getTime() > notifiedAfter.current)
           .sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
         for (const e of fresh.slice(-5)) {
-          new Notification("Featers", { body: e.summary ?? e.type, icon: "/logo.png", tag: e.id });
+          new Notification("Feasters", { body: e.summary ?? e.type, icon: "/logo.png", tag: e.id });
         }
         if (evs.length) {
           notifiedAfter.current = Math.max(
@@ -145,7 +145,7 @@ export default function NotificationBell() {
     if (p === "granted") {
       notifiedAfter.current = Date.now();
       await subscribePush();   // register this device for background Web Push
-      new Notification("Featers", {
+      new Notification("Feasters", {
         body: "Notifications are on — we'll alert you about new jobs and application updates.",
         icon: "/logo.png",
       });

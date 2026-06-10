@@ -13,7 +13,7 @@ const interTight = Inter_Tight({
 });
 
 export const metadata: Metadata = {
-  title: "Featers",
+  title: "Feasters",
   description: "Aggregate every job in Zimbabwe, match with code, and apply for you.",
   manifest: "/manifest.json",
   icons: {
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     ],
     apple: { url: "/apple-icon.png", sizes: "180x180" },
   },
-  appleWebApp: { capable: true, title: "Featers", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Feasters", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

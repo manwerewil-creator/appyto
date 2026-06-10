@@ -54,7 +54,7 @@ const PAGE_TITLES: { match: string; title: string }[] = [
   { match: "/onboarding", title: "Set up your profile" },
 ];
 const titleFor = (path: string) =>
-  path === "/" ? "Overview" : (PAGE_TITLES.find((p) => path.startsWith(p.match))?.title ?? "Featers");
+  path === "/" ? "Overview" : (PAGE_TITLES.find((p) => path.startsWith(p.match))?.title ?? "Feasters");
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = usePathname();
@@ -98,8 +98,8 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5 px-2 py-1">
-      <Image src="/logo.png" alt="Featers" width={34} height={34} priority />
-      <span className="text-lg font-extrabold tracking-tight">Featers</span>
+      <Image src="/logo.png" alt="Feasters" width={34} height={34} priority />
+      <span className="text-lg font-extrabold tracking-tight">Feasters</span>
     </Link>
   );
 }

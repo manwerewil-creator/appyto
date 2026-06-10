@@ -1,6 +1,6 @@
 // Company logo helper. We derive a logo from the EMPLOYER's email domain only —
 // never from the source job-board URL — so the brand shown belongs to the hiring
-// company and never reveals where Featers sourced the listing.
+// company and never reveals where Feasters sourced the listing.
 
 import type { Job } from "./types";
 

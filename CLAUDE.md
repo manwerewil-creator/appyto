@@ -1,8 +1,8 @@
-# CLAUDE.md — Featers
+# CLAUDE.md — Feasters
 
 Engineering handoff doc. Read this top-to-bottom before changing anything.
 
-> **Featers** (domain **feasters.cloud**, canonical **www.feasters.cloud**) is a
+> **Feasters** (domain **feasters.cloud**, canonical **www.feasters.cloud**) is a
 > Zimbabwe job-application tool. It scrapes every job from two boards, matches
 > them to a user with pure code (no AI), and applies on the user's behalf by
 > emailing the employer from the user's own inbox. Positioning everywhere:
@@ -10,10 +10,10 @@ Engineering handoff doc. Read this top-to-bottom before changing anything.
 >
 > **UI rule (important):** never surface internals to users. Do **not** name the
 > payment provider, the job-board sources, or "scraper/scraping" anywhere in the
-> app. Listings must feel like Featers serves them directly.
+> app. Listings must feel like Feasters serves them directly.
 >
 > The repo folder is still named `Appyto` and the GitHub repo is
-> `manwerewil-creator/appyto` — the product was renamed to **Featers** later.
+> `manwerewil-creator/appyto` — the product was renamed to **Feasters** later.
 
 ---
 
@@ -236,7 +236,7 @@ www.feasters.cloud.
 - [ ] Auto-apply cron scales sequentially (4–6s/send) — add a queue for many users.
 - [ ] Free+ tier: actually gate on a pasted Gemini key (currently plan logic only).
 - [ ] Subscription expiry/renewal (Paynow is one-off charges; `period_end` set +30d but no auto-renew).
-- [ ] Rename repo/folder from Appyto → Featers (cosmetic).
+- [ ] Rename repo/folder from Appyto → Feasters (cosmetic).
 - [ ] Upgrade Vercel to Pro to restore 6-hourly notify cron (currently daily — Hobby limit).
 
 ## 11. Common commands

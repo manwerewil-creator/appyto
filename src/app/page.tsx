@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import {
-  Briefcase, Building2, Target, Mail, Send, CheckCircle2, Circle, ArrowRight,
-  Sparkles, Zap, Wand2,
+  Briefcase, Building2, Target, Mail, CheckCircle2, Circle, ArrowRight, Sparkles,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -188,7 +187,7 @@ export default function Overview() {
             variants={container}
             initial="hidden"
             animate="show"
-            className="grid gap-6 lg:grid-cols-[1.4fr_1fr]"
+            className="grid gap-6"
           >
             {/* Setup checklist */}
             <motion.div variants={item}>
@@ -229,37 +228,6 @@ export default function Overview() {
                   <Button asChild className="mt-4 w-full sm:w-auto">
                     <Link href="/matches">View my {fmt(s.matches)} matches <ArrowRight className="h-4 w-4" /></Link>
                   </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* How Featers works (sources hidden — feels like Featers serves them) */}
-            <motion.div variants={item}>
-              <Card className="h-full overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 via-background to-violet-50">
-                <CardContent className="p-5">
-                  <div className="mb-3 flex items-center gap-2">
-                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
-                      <Wand2 className="h-4 w-4" />
-                    </span>
-                    <h3 className="font-semibold">How Featers works</h3>
-                  </div>
-                  <ol className="space-y-3 text-sm text-muted-foreground">
-                    <li className="flex gap-2.5">
-                      <span className="font-bold text-primary">1.</span>
-                      Featers gathers every open job across Zimbabwe into one place.
-                    </li>
-                    <li className="flex gap-2.5">
-                      <span className="font-bold text-primary">2.</span>
-                      Pure code ranks them against your profile, no guesswork.
-                    </li>
-                    <li className="flex gap-2.5">
-                      <span className="font-bold text-primary">3.</span>
-                      Our email engine writes and sends each application from your own inbox.
-                    </li>
-                  </ol>
-                  <div className="mt-4 flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary">
-                    <Zap className="h-3.5 w-3.5" /> A tool to apply faster, not a guarantee of a job.
-                  </div>
                 </CardContent>
               </Card>
             </motion.div>

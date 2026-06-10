@@ -105,7 +105,7 @@ export default function LoginPage() {
       }
 
       // Confirmation disabled → already signed in.
-      toast.success("Welcome to Featers!");
+      toast.success("Welcome to Feasters!");
       router.replace("/auth/callback");
       router.refresh();
     } catch (e: any) {
@@ -130,8 +130,8 @@ export default function LoginPage() {
       >
       <Card className="w-full">
         <CardHeader className="items-center text-center">
-          <img src="/logo.png" alt="Featers" width={56} height={56} className="mb-2" />
-          <CardTitle className="text-2xl">Featers</CardTitle>
+          <img src="/logo.png" alt="Feasters" width={56} height={56} className="mb-2" />
+          <CardTitle className="text-2xl">Feasters</CardTitle>
           <CardDescription>
             {mode === "signin"
               ? "Sign in to apply faster."
