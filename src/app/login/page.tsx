@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -25,6 +26,12 @@ export default function LoginPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);          // email/password submit
   const [googleBusy, setGoogleBusy] = useState(false);
+  const reduce = useReducedMotion();
+
+  // Animated reveal for the first/last name row when switching to sign-up.
+  const nameAnim = reduce
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
+    : { initial: { opacity: 0, height: 0 }, animate: { opacity: 1, height: "auto" as const }, exit: { opacity: 0, height: 0 } };
 
   useEffect(() => {
     setError(new URLSearchParams(window.location.search).get("error"));
@@ -115,7 +122,13 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-muted/40 via-background to-background px-4 py-12">
-      <Card className="w-full max-w-sm">
+      <motion.div
+        initial={reduce ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-sm"
+      >
+      <Card className="w-full">
         <CardHeader className="items-center text-center">
           <img src="/icon.svg" alt="" width={40} height={40} className="mb-2 rounded-lg" />
           <CardTitle className="text-2xl">Featers</CardTitle>
@@ -139,32 +152,41 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={submit} className="space-y-3">
-            {mode === "signup" && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="firstName">First name</Label>
-                  <Input
-                    id="firstName"
-                    autoComplete="given-name"
-                    placeholder="John"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    disabled={busy}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="lastName">Last name</Label>
-                  <Input
-                    id="lastName"
-                    autoComplete="family-name"
-                    placeholder="Smith"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    disabled={busy}
-                  />
-                </div>
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {mode === "signup" && (
+                <motion.div
+                  key="names"
+                  {...nameAnim}
+                  transition={{ duration: reduce ? 0 : 0.25, ease: "easeOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="firstName">First name</Label>
+                      <Input
+                        id="firstName"
+                        autoComplete="given-name"
+                        placeholder="John"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        disabled={busy}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="lastName">Last name</Label>
+                      <Input
+                        id="lastName"
+                        autoComplete="family-name"
+                        placeholder="Smith"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        disabled={busy}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -267,6 +289,7 @@ export default function LoginPage() {
           </p>
         </CardContent>
       </Card>
+      </motion.div>
     </div>
   );
 }

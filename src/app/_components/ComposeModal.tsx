@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
@@ -77,6 +78,17 @@ export default function ComposeModal({
 
   const paragraphs = body.split(/\n{2,}/).filter((p) => p.trim());
 
+  // Staggered reveal for the preview, so the email "assembles" on screen.
+  const reduce = useReducedMotion();
+  const container: Variants = {
+    hidden: {},
+    show: { transition: { staggerChildren: reduce ? 0 : 0.07, delayChildren: 0.05 } },
+  };
+  const block: Variants = {
+    hidden: reduce ? { opacity: 0 } : { opacity: 0, y: 12 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
+  };
+
   return (
     <Sheet open onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-xl">
@@ -115,9 +127,9 @@ export default function ComposeModal({
           <div className="flex flex-1 flex-col">
             <div className="flex-1 space-y-5 px-5 py-5">
               {mode === "preview" ? (
-                <>
+                <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
                   {/* Headline = the job role, front and centre */}
-                  <div>
+                  <motion.div variants={block}>
                     <div className="flex items-start justify-between gap-3">
                       <h2 className="text-2xl font-extrabold leading-tight tracking-tight">
                         Apply for {job.title}
@@ -127,28 +139,28 @@ export default function ComposeModal({
                     <p className="mt-1 text-sm text-muted-foreground">
                       <span className="font-medium text-foreground/70">Subject:</span> {subject}
                     </p>
-                  </div>
+                  </motion.div>
 
                   {reqs.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
+                    <motion.div variants={block} className="flex flex-wrap gap-1.5">
                       {reqs.map((r) => (
                         <span key={r} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                           {r}
                         </span>
                       ))}
-                    </div>
+                    </motion.div>
                   )}
 
                   {/* Body */}
-                  <div className="space-y-3 text-[15px] leading-relaxed text-foreground/90">
+                  <motion.div variants={block} className="space-y-3 text-[15px] leading-relaxed text-foreground/90">
                     {paragraphs.map((p, i) => (
                       <p key={i} className="whitespace-pre-line">{p}</p>
                     ))}
-                  </div>
+                  </motion.div>
 
                   {/* Links that ride along */}
                   {links.length > 0 && (
-                    <div className="space-y-2">
+                    <motion.div variants={block} className="space-y-2">
                       <p className="text-sm font-semibold">Links included</p>
                       <div className="space-y-1.5">
                         {links.map((l) => (
@@ -159,12 +171,12 @@ export default function ComposeModal({
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </motion.div>
                   )}
 
                   {/* Attachments, as file cards */}
                   {attachments.length > 0 && (
-                    <div className="space-y-2 border-t pt-4">
+                    <motion.div variants={block} className="space-y-2 border-t pt-4">
                       <p className="flex items-center gap-1.5 text-sm font-semibold">
                         <Paperclip className="h-4 w-4" /> {attachments.length} {attachments.length === 1 ? "Attachment" : "Attachments"}
                       </p>
@@ -184,9 +196,9 @@ export default function ComposeModal({
                           );
                         })}
                       </div>
-                    </div>
+                    </motion.div>
                   )}
-                </>
+                </motion.div>
               ) : (
                 <>
                   <div className="space-y-1.5">
