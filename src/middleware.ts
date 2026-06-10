@@ -3,7 +3,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/auth", "/api/google", "/api/billing/result", "/billing/return", "/api/cron"];
+const PUBLIC = ["/welcome", "/login", "/auth", "/api/google", "/api/billing/result", "/billing/return", "/api/cron"];
 
 export async function middleware(req: NextRequest) {
   let res = NextResponse.next({ request: req });
@@ -27,9 +27,16 @@ export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const isPublic = PUBLIC.some((p) => path.startsWith(p));
 
+  // Unauthenticated users meet the Get Started screen first (which leads to /login).
   if (!user && !isPublic) {
     const url = req.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/welcome";
+    return NextResponse.redirect(url);
+  }
+  // Signed-in users have no use for the Get Started screen — send them to the app.
+  if (user && path === "/welcome") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
   return res;

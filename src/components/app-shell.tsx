@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Briefcase, Target, Send, Inbox, FileText, Crown, Settings, LogOut, Menu,
@@ -159,47 +160,47 @@ function TopBarActions() {
   );
 }
 
-// Floating liquid-glass tab bar — mobile + tablet only (hidden ≥ lg).
-// A single highlight pill slides (with a spring) between tabs instead of each
-// item toggling its own background, so switching sections feels continuous.
+// Floating dim-gray tab bar — mobile + tablet only (hidden ≥ lg). The active
+// item expands into an icon + label pill; the rest stay icon-only. The pill
+// resizes with a spring and siblings reflow via framer-motion layout.
 function BottomNav() {
   const path = usePathname();
+  const reduce = useReducedMotion();
   const activeIndex = Math.max(0, BOTTOM_NAV.findIndex(({ href }) => isActivePath(path, href)));
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-3 safe-bottom lg:hidden">
-      <nav className="lg-glass pointer-events-auto relative flex w-full max-w-md items-stretch rounded-[28px] p-2">
-        {/* Sliding active indicator — width = one slot, translated to the active tab. */}
-        <span
-          aria-hidden
-          className="lg-pill lg-slide absolute inset-y-2 left-2 rounded-[20px]"
-          style={{
-            width: `calc((100% - 1rem) / ${BOTTOM_NAV.length})`,
-            transform: `translateX(${activeIndex * 100}%)`,
-          }}
-        />
+      <nav className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-gradient-to-b from-[#4b5158] to-[#363b41] p-1.5 shadow-[0_14px_34px_-10px_rgba(0,0,0,0.55)] ring-1 ring-white/10">
         {BOTTOM_NAV.map(({ href, label, Icon }, i) => {
           const active = i === activeIndex;
           return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className="relative z-10 flex flex-1 flex-col items-center justify-center gap-1 rounded-[20px] py-1.5 text-center"
-            >
-              <Icon
+            <Link key={href} href={href} aria-current={active ? "page" : undefined} aria-label={label}>
+              <motion.div
+                layout={!reduce}
+                transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 480, damping: 38 }}
                 className={cn(
-                  "lg-anim h-[22px] w-[22px]",
-                  active ? "scale-110 text-white" : "text-primary/80",
-                )}
-              />
-              <span
-                className={cn(
-                  "lg-anim text-[10px] font-semibold leading-none",
-                  active ? "text-white" : "text-muted-foreground",
+                  "flex items-center justify-center gap-2 rounded-full transition-colors",
+                  active ? "bg-[#1d2126] px-4 py-2.5" : "px-3.5 py-2.5 hover:bg-white/5",
                 )}
               >
-                {label}
-              </span>
+                <Icon
+                  className={cn("h-[22px] w-[22px] shrink-0", active ? "text-white" : "text-white/70")}
+                  strokeWidth={active ? 2.2 : 1.9}
+                />
+                <AnimatePresence initial={false}>
+                  {active && (
+                    <motion.span
+                      key="label"
+                      initial={reduce ? { opacity: 0 } : { opacity: 0, width: 0 }}
+                      animate={reduce ? { opacity: 1 } : { opacity: 1, width: "auto" }}
+                      exit={reduce ? { opacity: 0 } : { opacity: 0, width: 0 }}
+                      transition={{ duration: reduce ? 0 : 0.2, ease: "easeOut" }}
+                      className="overflow-hidden whitespace-nowrap text-sm font-semibold text-white"
+                    >
+                      {label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             </Link>
           );
         })}
@@ -211,8 +212,8 @@ function BottomNav() {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
-  // Login / auth screens render without the app chrome.
-  if (path === "/login" || path.startsWith("/auth")) return <>{children}</>;
+  // Welcome / login / auth screens render without the app chrome.
+  if (path === "/welcome" || path === "/login" || path.startsWith("/auth")) return <>{children}</>;
   const title = titleFor(path);
   return (
     <div className="min-h-screen bg-muted/30">

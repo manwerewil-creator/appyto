@@ -78,62 +78,48 @@ export default function Overview() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      {/* ── Hero — flat & minimal ────────────────────────────────────────── */}
       <motion.div
         initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-blue-600 to-indigo-600 p-6 text-white shadow-lg sm:p-8"
       >
-        <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:20px_20px]" />
-
-        {/* Job image on the right, fading out toward the left into the card. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/job-bsk.jpg"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 hidden h-full w-3/5 object-cover object-center md:block"
-          style={{
-            maskImage: "linear-gradient(to right, transparent 0%, #000 55%)",
-            WebkitMaskImage: "linear-gradient(to right, transparent 0%, #000 55%)",
-          }}
-        />
-
-        <div className="relative z-10 max-w-xl space-y-5">
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium text-white/80">
-              {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
-            </p>
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Your job-search command centre</h1>
-            <p className="max-w-md text-sm text-white/80">
-              {s ? `${fmt(s.matches)} jobs match your profile right now.` : "Loading your latest matches…"}
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button asChild size="lg" className="bg-white font-semibold text-primary shadow-md hover:bg-white/90">
-              <Link href="/matches">
-                <Sparkles className="h-4 w-4" /> View my matches <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            {s && (
-              <div className="w-full sm:max-w-[14rem]">
-                <div className="flex justify-between text-xs text-white/80">
-                  <span>Applied today</span>
-                  <span className="tabular-nums">{s.appliedToday}/{s.dailyCap}</span>
+        <Card>
+          <CardContent className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium text-muted-foreground">
+                {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
+              </p>
+              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Your job-search command centre</h1>
+              <p className="text-sm text-muted-foreground">
+                {s ? `${fmt(s.matches)} jobs match your profile right now.` : "Loading your latest matches…"}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-stretch gap-3 sm:w-60 sm:items-end">
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                <Link href="/matches">
+                  <Sparkles className="h-4 w-4" /> View my matches <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              {s && (
+                <div className="w-full">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Applied today</span>
+                    <span className="tabular-nums">{s.appliedToday}/{s.dailyCap}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <motion.div
+                      className="h-full rounded-full bg-primary"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${todayPct}%` }}
+                      transition={{ duration: reduce ? 0 : 0.8, ease: "easeOut", delay: 0.2 }}
+                    />
+                  </div>
                 </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/25">
-                  <motion.div
-                    className="h-full rounded-full bg-white"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${todayPct}%` }}
-                    transition={{ duration: reduce ? 0 : 0.8, ease: "easeOut", delay: 0.2 }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {!s && (

@@ -20,21 +20,50 @@
 
 .nav { display: flex; justify-content: space-between; margin-top: 4px; }
 
+/* ── Responsive builder layout ───────────────────────────────────────────────
+   The form + live-preview split keys off the CONTAINER width (not the viewport),
+   so the sidebar eating horizontal space can never crush the form into truncated
+   fields. Below the threshold it stacks to a single, full-width column. */
+.builder { container-type: inline-size; }
+.grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);   /* single column by default */
+  align-items: start;
+}
+@container (min-width: 880px) {
+  .grid { grid-template-columns: minmax(0, 1fr) clamp(300px, 34cqw, 420px); }
+  .preview { position: sticky; top: 84px; }
+}
+
 /* Live preview */
-.preview { position: sticky; top: 84px; }
+.preview { position: static; min-width: 0; }
 .previewBar { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .tmplBtn { padding: 6px 11px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 .tmplBtnActive { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+
+/* Fluid A4 frame: width follows its column, height locked to the 210:297 A4
+   ratio. The inner 210mm sheet is scaled by --cv-scale (set in JS from the
+   frame's measured width), so the full page always fits exactly at any size. */
 .frame {
-  width: 516px; height: 730px; overflow: hidden; border: 1px solid var(--border);
-  border-radius: 10px; box-shadow: 0 8px 30px -12px rgba(16,24,40,.18); background: #fff;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 210 / 297;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px -12px rgba(16,24,40,.18);
+  background: #fff;
   margin-inline: auto;
 }
-.scaler { width: 210mm; transform: scale(0.65); transform-origin: top left; }
-
-@media (max-width: 640px) {
-  .frame { width: 300px; height: 425px; }
-  .scaler { transform: scale(0.378); }
+.scaler {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 793.7px;                 /* 210mm @ 96dpi — the sheet's true width */
+  transform: scale(var(--cv-scale, 0.53));
+  transform-origin: top left;
 }
 .photoBox { width: 96px; height: 96px; border: 1.5px dashed var(--border); border-radius: 10px; display: grid; place-items: center; cursor: pointer; overflow: hidden; color: var(--muted); font-size: 12px; text-align: center; }
 .photoBox img { width: 100%; height: 100%; object-fit: cover; }

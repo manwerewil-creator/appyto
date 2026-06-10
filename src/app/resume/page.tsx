@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ResumeSheet from "./Templates";
 import { TEMPLATES, SAMPLE_RESUME, type Resume, type Experience, type Education, type Skill } from "@/lib/resume";
 import b from "./builder.module.css";
@@ -31,9 +31,23 @@ export default function ResumeBuilder() {
   const [r, setR] = useState<Resume | null>(null);
   const [step, setStep] = useState(0);
   const [saved, setSaved] = useState(true);
+  const [scale, setScale] = useState(0.53);   // A4 preview scale (fluid; set from measured width)
   const t = useRef<ReturnType<typeof setTimeout>>();
+  const roRef = useRef<ResizeObserver>();
 
   useEffect(() => { fetch("/api/resume").then((x) => x.json()).then(setR); }, []);
+
+  // Measure the preview frame and scale the 793.7px (210mm) A4 sheet to fit it
+  // exactly — so the preview adapts to any column/screen width with no overflow.
+  const frameCb = useCallback((node: HTMLDivElement | null) => {
+    roRef.current?.disconnect();
+    if (!node) return;
+    const update = () => { if (node.clientWidth) setScale(node.clientWidth / 793.7); };
+    update();
+    roRef.current = new ResizeObserver(update);
+    roRef.current.observe(node);
+  }, []);
+  useEffect(() => () => roRef.current?.disconnect(), []);
 
   // Debounced autosave.
   useEffect(() => {
@@ -114,9 +128,10 @@ export default function ResumeBuilder() {
           })}
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,560px)]">
+        <div className={cn("mt-6", b.builder)}>
+        <div className={b.grid}>
           {/* ── Form column ── */}
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             {step === 0 && (
               <Card>
                 <CardContent className="space-y-4 pt-6">
@@ -344,10 +359,11 @@ export default function ResumeBuilder() {
                 <button key={tp.id} className={`${b.tmplBtn} ${r.template === tp.id ? b.tmplBtnActive : ""}`} onClick={() => set("template", tp.id)}>{tp.name}</button>
               ))}
             </div>
-            <div className={b.frame}>
-              <div className={b.scaler}><ResumeSheet resume={r} /></div>
+            <div className={b.frame} ref={frameCb}>
+              <div className={b.scaler} style={{ transform: `scale(${scale})` }}><ResumeSheet resume={r} /></div>
             </div>
           </aside>
+        </div>
         </div>
       </div>
 

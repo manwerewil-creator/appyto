@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   Check, Upload, Loader2, FileText, Plus, Trash2, Link2, Paperclip, X,
-  MapPin, Mail, Phone, UserRound, Target, PenLine, Sparkles, type LucideIcon,
+  MapPin, Mail, Phone, UserRound, Target, PenLine, type LucideIcon,
 } from "lucide-react";
 
 const LOCATIONS = ["Harare", "Bulawayo", "Mutare", "Gweru", "Kwekwe", "Masvingo", "Chitungwiza", "Remote"];
@@ -215,24 +215,6 @@ export default function ProfilePage() {
     </div>
   );
 
-  // Circular profile-strength ring.
-  const R = 26, C = 2 * Math.PI * R;
-  const StrengthRing = (
-    <div className="relative grid h-[72px] w-[72px] shrink-0 place-items-center">
-      <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
-        <circle cx="32" cy="32" r={R} fill="none" stroke="hsl(var(--sb-muted))" strokeWidth="6" />
-        <motion.circle
-          cx="32" cy="32" r={R} fill="none" stroke="hsl(var(--sb-primary))" strokeWidth="6"
-          strokeLinecap="round" strokeDasharray={C}
-          initial={{ strokeDashoffset: reduce ? C - (completeness / 100) * C : C }}
-          animate={{ strokeDashoffset: C - (completeness / 100) * C }}
-          transition={{ duration: reduce ? 0 : 0.9, ease: [0.2, 0.7, 0.2, 1] }}
-        />
-      </svg>
-      <span className="absolute text-sm font-bold tracking-tight text-primary">{completeness}%</span>
-    </div>
-  );
-
   const Stat = ({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) => (
     <div className="flex items-center gap-3 rounded-xl border bg-background px-3 py-2.5">
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
@@ -253,33 +235,24 @@ export default function ProfilePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.2, 0.7, 0.2, 1] }}
       >
-        <Card className="overflow-hidden">
-          {/* Banner */}
-          <div className="relative h-28 bg-[linear-gradient(110deg,hsl(221_83%_53%),hsl(231_70%_55%)_45%,hsl(258_70%_56%))] sm:h-32">
-            <div className="absolute inset-0 opacity-[0.18] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:16px_16px]" />
-            <div className="absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/15 blur-2xl" />
-            <div className="absolute -bottom-20 left-12 h-44 w-44 rounded-full bg-indigo-300/20 blur-2xl" />
-            <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-inset ring-white/25 backdrop-blur-sm">
-              <Sparkles className="h-3 w-3" /> {completeness}% complete
-            </span>
-          </div>
-
-          <CardContent className="p-5 pt-0">
-            <div className="-mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <Card>
+          <CardContent className="space-y-5 p-5 sm:p-6">
+            {/* Identity row — flat, no banner */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-center gap-4">
                 <UserAvatar
                   src={avatar}
                   name={p.full_name || authName}
                   email={p.email || authEmail}
-                  className="h-24 w-24 border-4 border-background text-2xl shadow-xl ring-1 ring-black/[0.06] sm:h-[104px] sm:w-[104px]"
+                  className="h-20 w-20 shrink-0 text-2xl shadow-sm ring-1 ring-black/[0.06] sm:h-[88px] sm:w-[88px]"
                 />
-                <div className="min-w-0 space-y-1 pb-1">
+                <div className="min-w-0 space-y-1">
                   <InlineEdit
                     value={p.full_name}
                     onChange={(v) => set("full_name", v)}
                     placeholder={authName || "Your name"}
                     ariaLabel="Full name"
-                    className="text-2xl font-bold tracking-tight"
+                    className="text-xl font-bold tracking-tight sm:text-2xl"
                   />
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <InlineEdit
@@ -298,24 +271,8 @@ export default function ProfilePage() {
                     <span className="inline-flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} /> {locationLine}
                     </span>
-                    <InlineEdit
-                      value={p.email}
-                      onChange={(v) => set("email", v)}
-                      placeholder="add email"
-                      ariaLabel="Email"
-                      icon={Mail}
-                      autoWidth
-                      className="text-sm"
-                    />
-                    <InlineEdit
-                      value={p.phone}
-                      onChange={(v) => set("phone", v)}
-                      placeholder="add phone"
-                      ariaLabel="Phone"
-                      icon={Phone}
-                      autoWidth
-                      className="text-sm"
-                    />
+                    <InlineEdit value={p.email} onChange={(v) => set("email", v)} placeholder="add email" ariaLabel="Email" icon={Mail} autoWidth className="text-sm" />
+                    <InlineEdit value={p.phone} onChange={(v) => set("phone", v)} placeholder="add phone" ariaLabel="Phone" icon={Phone} autoWidth className="text-sm" />
                   </div>
                 </div>
               </div>
@@ -326,18 +283,26 @@ export default function ProfilePage() {
               </Button>
             </div>
 
-            {/* Strength ring + quick stats */}
-            <div className="mt-5 grid gap-3 rounded-2xl border bg-muted/30 p-4 sm:grid-cols-[auto_1fr]">
-              <div className="flex items-center gap-3.5">
-                {StrengthRing}
-                <div className="min-w-0">
+            {/* Profile strength — clean horizontal bar */}
+            <div className="space-y-4 rounded-2xl border bg-muted/30 p-4">
+              <div>
+                <div className="mb-1.5 flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold">Profile strength</p>
-                  <p className="text-xs text-muted-foreground">
-                    {completeness < 100
-                      ? "Complete it for better matches and stronger applications."
-                      : "All set — your profile is complete. 🎉"}
-                  </p>
+                  <span className="text-sm font-bold tabular-nums text-primary">{completeness}%</span>
                 </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <motion.div
+                    className="h-full rounded-full bg-primary"
+                    initial={{ width: reduce ? `${completeness}%` : 0 }}
+                    animate={{ width: `${completeness}%` }}
+                    transition={{ duration: reduce ? 0 : 0.8, ease: [0.2, 0.7, 0.2, 1] }}
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {completeness < 100
+                    ? "Complete it for better matches and stronger applications."
+                    : "All set — your profile is complete. 🎉"}
+                </p>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <Stat icon={Target} label="Target roles" value={p.desired_titles.length || "—"} />

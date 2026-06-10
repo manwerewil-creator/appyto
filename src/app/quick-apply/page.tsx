@@ -40,26 +40,26 @@ export default function QuickApply() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      {/* ── Intro banner ─────────────────────────────────────────────────── */}
+      {/* ── Intro header — flat & minimal ────────────────────────────────── */}
       <motion.div
         initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-blue-600 to-indigo-600 p-6 text-white shadow-lg sm:p-7"
       >
-        <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:20px_20px]" />
-        <div className="relative z-10 flex items-start gap-4">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/15 backdrop-blur-sm">
-            <Send className="h-6 w-6" />
-          </span>
-          <div className="space-y-1">
-            <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl">Apply to any job, from one place</h1>
-            <p className="max-w-lg text-sm text-white/85">
-              Found a job elsewhere? Paste it below — we&rsquo;ll draft a response you can edit and send it
-              straight from your connected inbox.
-            </p>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="flex items-start gap-4 p-5 sm:p-6">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <Send className="h-6 w-6" />
+            </span>
+            <div className="space-y-1">
+              <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl">Apply to any job, from one place</h1>
+              <p className="max-w-lg text-sm text-muted-foreground">
+                Found a job elsewhere? Paste it below — we&rsquo;ll draft a response you can edit and send it
+                straight from your connected inbox.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {done && (
