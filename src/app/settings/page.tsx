@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
-  ChevronRight, UserRound, Mail, MailCheck, KeyRound, ShieldCheck, Zap,
+  ChevronRight, UserRound, Mail, MailCheck, KeyRound,
   SlidersHorizontal, Crown, LogOut, Check, X, Loader2, ExternalLink,
 } from "lucide-react";
 
@@ -25,18 +25,8 @@ const GMAIL_2SV = "https://myaccount.google.com/signinoptions/two-step-verificat
 const GMAIL_APP_PW = "https://myaccount.google.com/apppasswords";
 
 interface SettingsView {
-  auth_method: "smtp" | "google";
   smtp_host: string; smtp_port: number; smtp_user: string; has_pass: boolean; smtp_verified: boolean;
-  google_connected: boolean; google_email: string; google_configured: boolean;
 }
-
-const GOOGLE_MSG: Record<string, { ok: boolean; text: string }> = {
-  connected: { ok: true, text: "Gmail connected! Feasters can now send applications from your inbox." },
-  notconfigured: { ok: false, text: "Google isn't configured on this server yet — set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in your env." },
-  denied: { ok: false, text: "You declined the Google permission. Connect again to enable sending." },
-  norefresh: { ok: false, text: "Google didn't return a refresh token. Remove Feasters from your Google account permissions and reconnect." },
-  error: { ok: false, text: "Something went wrong connecting Gmail. Try again." },
-};
 
 type Expandable = "email" | "apply" | null;
 
@@ -55,16 +45,8 @@ export default function SettingsPage() {
   useEffect(() => {
     load();
     fetch("/api/profile").then((r) => r.json()).then(setProf).catch(() => {});
-    const params = new URLSearchParams(window.location.search);
-    const g = params.get("google");
-    if (g && GOOGLE_MSG[g]) {
-      const m = GOOGLE_MSG[g];
-      (m.ok ? toast.success : toast.error)(m.text);
-      window.history.replaceState({}, "", "/settings");
-      setOpen("email");
-    }
     // Deep-link from onboarding: open the Email connect section straight away.
-    if (params.get("connect") === "email") {
+    if (new URLSearchParams(window.location.search).get("connect") === "email") {
       setOpen("email");
       window.history.replaceState({}, "", "/settings");
     }
@@ -92,7 +74,6 @@ export default function SettingsPage() {
     else toast.error(d.error ?? "Could not connect.");
     await load();
   };
-  const disconnectGoogle = async () => { await fetch("/api/google/disconnect", { method: "POST" }); await load(); toast.success("Gmail disconnected."); };
 
   const saveCap = async () => {
     if (!prof) return;
@@ -119,8 +100,8 @@ export default function SettingsPage() {
     );
   }
 
-  const ready = s.auth_method === "google" ? s.google_connected : s.smtp_verified;
-  const activeAddr = s.auth_method === "google" ? s.google_email : s.smtp_user;
+  const ready = s.smtp_verified;
+  const activeAddr = s.smtp_user;
 
   // ── Row primitives (iOS grouped-list style) ─────────────────────────────
   const Group = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -181,7 +162,7 @@ export default function SettingsPage() {
             icon={ready ? <MailCheck className="h-[18px] w-[18px]" strokeWidth={1.75} /> : <Mail className="h-[18px] w-[18px]" strokeWidth={1.75} />}
             tint={ready ? "bg-success/10 text-success" : "bg-primary/10 text-primary"}
             title="Email connect"
-            sub={ready ? <>Sending via {activeAddr} ({s.auth_method === "google" ? "Gmail" : "SMTP"})</> : "Connect the inbox we apply from"}
+            sub={ready ? <>Sending via {activeAddr} (SMTP)</> : "Connect the inbox we apply from"}
             trailing={
               <div className="flex items-center gap-2">
                 {ready
@@ -202,41 +183,12 @@ export default function SettingsPage() {
               className="overflow-hidden border-t bg-muted/20"
             >
               <div className="space-y-4 p-4">
-                {/* Gmail one-click */}
-                <div>
-                  <div className="mb-2 flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-primary" strokeWidth={1.75} />
-                    <span className="text-sm font-semibold">Connect Gmail</span>
-                    <Badge variant="outline" className="font-normal">Recommended</Badge>
-                  </div>
-                  {s.google_connected ? (
-                    <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-3 py-2.5">
-                      <ShieldCheck className="h-5 w-5 text-success" strokeWidth={1.75} />
-                      <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">Connected as <span className="font-medium text-foreground">{s.google_email}</span></span>
-                      <Button variant="outline" size="sm" onClick={disconnectGoogle}>Disconnect</Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Button asChild variant="outline" className="h-11 w-full justify-center">
-                        <a href="/api/google/start"><span className="text-base font-bold text-[#4285F4]">G</span> Continue with Google</a>
-                      </Button>
-                      {!s.google_configured && <p className="text-xs text-muted-foreground">Server needs GOOGLE_CLIENT_ID / SECRET set first.</p>}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="h-px flex-1 bg-border" />
-                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">or app password</span>
-                  <span className="h-px flex-1 bg-border" />
-                </div>
-
-                {/* SMTP / App password */}
+                {/* SMTP / App password — the only sending method */}
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <KeyRound className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
-                    <span className="text-sm font-semibold">App password / SMTP</span>
-                    {s.auth_method === "smtp" && s.smtp_verified && <Badge variant="success">Active</Badge>}
+                    <span className="text-sm font-semibold">Gmail app password (SMTP)</span>
+                    {s.smtp_verified && <Badge variant="success">Active</Badge>}
                   </div>
                   <div className="rounded-lg border bg-card p-3 text-xs leading-relaxed text-muted-foreground">
                     <span className="font-semibold text-foreground">How to get a Gmail app password:</span>{" "}

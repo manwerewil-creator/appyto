@@ -11,10 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  ArrowRight, ChevronLeft, ChevronRight, Check, Mail, Sparkles, Zap, KeyRound,
+  ArrowRight, ChevronLeft, ChevronRight, Check, Mail, Sparkles, KeyRound,
   ExternalLink, ShieldCheck, UserRound, Briefcase, MapPin, PartyPopper, type LucideIcon,
 } from "lucide-react";
 
@@ -42,13 +41,12 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [emailReady, setEmailReady] = useState(false);
   const [matchCount, setMatchCount] = useState<number | null>(null);
-  const [guideOpen, setGuideOpen] = useState(false);   // "App password" how-to
+  const [guideOpen, setGuideOpen] = useState(true);   // "App password" how-to (only method)
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then(setP);
-    fetch("/api/settings").then((r) => r.json()).then((s) =>
-      setEmailReady(s.auth_method === "google" ? s.google_connected : s.smtp_verified));
+    fetch("/api/settings").then((r) => r.json()).then((s) => setEmailReady(!!s.smtp_verified));
   }, []);
 
   if (!p) {
@@ -250,36 +248,16 @@ export default function Onboarding() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Option 1 — Gmail one-click */}
-                  <div className="rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                        <Zap className="h-[18px] w-[18px]" strokeWidth={1.75} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="flex flex-wrap items-center gap-2 font-semibold">
-                          Connect Gmail in one click <Badge variant="success">Easiest</Badge>
-                        </p>
-                        <p className="mt-0.5 text-sm text-muted-foreground">
-                          Sign in with Google and allow &ldquo;send email&rdquo;. Nothing to copy or configure.
-                        </p>
-                        <Button asChild className="mt-3">
-                          <a href="/api/google/start"><span className="text-base font-bold">G</span> Continue with Google</a>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Option 2 — App password / SMTP (with how-to) */}
+                  {/* Gmail App Password (SMTP) — the only sending method */}
                   <div className="overflow-hidden rounded-xl border">
                     <button type="button" onClick={() => setGuideOpen((o) => !o)} aria-expanded={guideOpen}
                       className="flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-muted/50">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
                         <KeyRound className="h-[18px] w-[18px]" strokeWidth={1.75} />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold">Or use a Gmail App Password (SMTP)</p>
-                        <p className="text-sm text-muted-foreground">Best if you&rsquo;d rather not sign in with Google. Takes ~2 minutes.</p>
+                        <p className="font-semibold">Connect with a Gmail App Password (SMTP)</p>
+                        <p className="text-sm text-muted-foreground">Takes about 2 minutes — follow the steps below.</p>
                       </div>
                       <ChevronRight className={cn("mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform", guideOpen && "rotate-90")} />
                     </button>
