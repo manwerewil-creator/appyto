@@ -120,9 +120,9 @@ export default function MatchesPage() {
       )}
 
       {!data ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}><CardContent className="py-12 text-center text-sm text-muted-foreground">Scoring…</CardContent></Card>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i}><CardContent className="py-10 text-center text-sm text-muted-foreground">Scoring…</CardContent></Card>
           ))}
         </div>
       ) : !data.hasPrefs ? (
@@ -147,7 +147,7 @@ export default function MatchesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-3">
           {data.items.map((j) => (
             <JobCard key={j.id} job={j} onApply={applyOne}
               onCustomize={(job) => setComposeJob({ id: job.id, title: job.title, apply_email: job.apply_email })}
