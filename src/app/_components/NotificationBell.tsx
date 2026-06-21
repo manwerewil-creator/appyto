@@ -172,7 +172,9 @@ export default function NotificationBell() {
         <>
           {/* click-away backdrop */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] origin-top-right animate-fade-in overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-xl">
+          {/* Mobile: pinned to the viewport's right edge so the panel can't run
+              off-screen. Desktop (sm+): anchored under the bell. */}
+          <div className="fixed right-2 top-[58px] z-50 w-80 max-w-[calc(100vw-1rem)] origin-top-right animate-fade-in overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-xl sm:absolute sm:right-0 sm:top-auto sm:mt-2 sm:max-w-[calc(100vw-1.5rem)]">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <p className="font-semibold">Notifications</p>
               <Link href="/applications" onClick={() => setOpen(false)} className="text-xs text-primary hover:underline">
