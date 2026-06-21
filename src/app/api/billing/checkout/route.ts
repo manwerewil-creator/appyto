@@ -41,7 +41,11 @@ export async function POST(req: NextRequest) {
 
   // Mobile money (EcoCash / OneMoney / InnBucks): in-app express checkout — the
   // payer approves a prompt on their phone, no redirect to Paynow's page.
+  const ALLOWED_METHODS: MobileMethod[] = ["ecocash", "onemoney", "innbucks", "telecash"];
   const useMobile = !!body.phone && !!body.method;
+  if (useMobile && !ALLOWED_METHODS.includes(body.method as MobileMethod)) {
+    return NextResponse.json({ ok: false, error: "Unsupported payment method." }, { status: 400 });
+  }
 
   try {
     let pollUrl: string;
