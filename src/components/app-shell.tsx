@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Briefcase, Target, Send, Inbox, FileText, Crown, Settings, LogOut, Menu,
@@ -161,52 +160,36 @@ function TopBarActions() {
   );
 }
 
-// Floating dim-gray tab bar — mobile + tablet only (hidden ≥ lg). The active
-// item expands into an icon + label pill; the rest stay icon-only. The pill
-// resizes with a spring and siblings reflow via framer-motion layout.
+// Flat, full-width bottom tab bar — mobile + tablet only (hidden ≥ lg). A plain
+// bar pinned to the bottom edge with a top border (not a floating rounded pill),
+// so it reads as part of the app. Content reserves space via .pb-safe-nav.
 function BottomNav() {
   const path = usePathname();
-  const reduce = useReducedMotion();
   const activeIndex = Math.max(0, BOTTOM_NAV.findIndex(({ href }) => isActivePath(path, href)));
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-4 safe-bottom lg:hidden">
-      <nav className="pointer-events-auto flex w-full max-w-md items-center justify-between gap-1 rounded-[30px] bg-[#2b2f36] px-2.5 py-2.5 shadow-[0_14px_36px_-14px_rgba(0,0,0,0.55)] ring-1 ring-white/10">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background lg:hidden">
+      <div className="safe-bottom flex items-stretch justify-around">
         {BOTTOM_NAV.map(({ href, label, Icon }, i) => {
           const active = i === activeIndex;
           return (
-            <Link key={href} href={href} aria-current={active ? "page" : undefined} aria-label={label} className="min-w-0">
-              <motion.div
-                layout={!reduce}
-                transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 40 }}
-                className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-full transition-colors",
-                  active ? "bg-white/12 px-3.5 py-2 shadow-sm" : "px-3 py-2 active:bg-white/10",
-                )}
-              >
-                <Icon
-                  className={cn("h-[18px] w-[18px] shrink-0", active ? "text-white" : "text-white/60")}
-                  strokeWidth={active ? 2.2 : 1.9}
-                />
-                <AnimatePresence initial={false}>
-                  {active && (
-                    <motion.span
-                      key="label"
-                      initial={reduce ? { opacity: 0 } : { opacity: 0, width: 0 }}
-                      animate={reduce ? { opacity: 1 } : { opacity: 1, width: "auto" }}
-                      exit={reduce ? { opacity: 0 } : { opacity: 0, width: 0 }}
-                      transition={{ duration: reduce ? 0 : 0.22, ease: "easeOut" }}
-                      className="overflow-hidden whitespace-nowrap text-[12.5px] font-semibold tracking-tight text-white"
-                    >
-                      {label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.div>
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              aria-label={label}
+              className={cn(
+                "relative flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors",
+                active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {active && <span className="absolute left-1/2 top-0 h-0.5 w-7 -translate-x-1/2 rounded-full bg-primary" />}
+              <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.2 : 1.8} />
+              {label}
             </Link>
           );
         })}
-      </nav>
-    </div>
+      </div>
+    </nav>
   );
 }
 
@@ -248,7 +231,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <TopBarActions />
         </header>
 
-        {/* Main content — extra bottom padding on mobile so the floating bar never overlaps */}
+        {/* Main content — reserves space for the fixed bottom bar on mobile */}
         <main className="pb-safe-nav lg:pb-0">{children}</main>
       </div>
 

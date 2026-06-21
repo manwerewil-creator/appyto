@@ -24,9 +24,6 @@ export async function GET(req: NextRequest) {
   if (oauthError) {
     return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(oauthError)}`);
   }
-  if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("No authorization code returned")}`);
-  }
 
   const pending: { name: string; value: string; options: Record<string, unknown> }[] = [];
   const supabase = createServerClient(
@@ -41,20 +38,27 @@ export async function GET(req: NextRequest) {
     },
   );
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) {
-    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
+  // OAuth (Google): exchange the code for a session. Email/password sign-in has
+  // no code — the session was already established client-side and arrives here
+  // in the cookies, so we just validate it below instead of erroring.
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
+    }
   }
 
-  // Decide where to send the user.
+  // Decide where to send the user (and confirm a session actually exists).
   const { data: { user } } = await supabase.auth.getUser();
-  let dest = "/onboarding";
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles").select("onboarded").eq("id", user.id).maybeSingle();
-    dest = profile?.onboarded ? "/" : "/onboarding";
-    await logActivity(supabase, user.id, "signed_in", "Signed in");
+  if (!user) {
+    const msg = code ? "Could not complete sign-in." : "Please sign in to continue.";
+    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(msg)}`);
   }
+
+  const { data: profile } = await supabase
+    .from("profiles").select("onboarded").eq("id", user.id).maybeSingle();
+  const dest = profile?.onboarded ? "/" : "/onboarding";
+  await logActivity(supabase, user.id, "signed_in", "Signed in");
 
   const res = NextResponse.redirect(`${origin}${dest}`);
   for (const { name, value, options } of pending) res.cookies.set(name, value, options as any);

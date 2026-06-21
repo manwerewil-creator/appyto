@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -16,7 +15,6 @@ type Mode = "signin" | "signup";
 const FIELD = "h-12 rounded-xl border-transparent bg-muted/70 px-4 text-[15px] focus-visible:border-primary focus-visible:bg-background focus-visible:ring-2";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>("signin");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -101,9 +99,9 @@ export default function LoginPage() {
       if (mode === "signin") {
         const { error: err } = await sb.auth.signInWithPassword({ email, password });
         if (err) { setError(err.message); setBusy(false); return; }
-        // Session cookie is set; let the server decide where to land.
-        router.replace("/auth/callback");
-        router.refresh();
+        // Session cookie is set client-side. Hard-navigate to the callback so the
+        // server sees the session and routes us to onboarding / dashboard.
+        window.location.assign("/auth/callback");
         return;
       }
 
@@ -132,8 +130,7 @@ export default function LoginPage() {
 
       // Confirmation disabled → already signed in.
       toast.success("Welcome to Feasters!");
-      router.replace("/auth/callback");
-      router.refresh();
+      window.location.assign("/auth/callback");
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong. Please try again.");
       setBusy(false);

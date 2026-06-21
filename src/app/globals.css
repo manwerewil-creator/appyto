@@ -201,7 +201,7 @@ input, select, textarea, button { font-family: inherit; font-size: 15px; }
 .lg-anim  { transition: transform .35s cubic-bezier(.2,.8,.2,1), color .3s ease, opacity .25s ease; }
 /* Respect notches / home indicators on mobile. */
 .safe-bottom { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
-.pb-safe-nav { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+.pb-safe-nav { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
 @media (min-width: 1024px) { .pb-safe-nav { padding-bottom: 0; } }
 
 @media (prefers-reduced-motion: reduce) {

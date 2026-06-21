@@ -10,3 +10,7 @@ next-env.d.ts
 .DS_Store
 
 .vercel
+
+# Local mobile-preview helpers (not for commit)
+.pw-*.mjs
+.pw-*.png

@@ -14,8 +14,11 @@ export async function POST(req: NextRequest) {
   const { user } = await getAuth();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const b = await req.json();
-  if (!b.apply_email) return NextResponse.json({ ok: false, error: "An employer email is required." }, { status: 400 });
+  let b: any;
+  try { b = await req.json(); } catch { return NextResponse.json({ ok: false, error: "invalid request" }, { status: 400 }); }
+  if (!b?.apply_email || typeof b.apply_email !== "string") {
+    return NextResponse.json({ ok: false, error: "An employer email is required." }, { status: 400 });
+  }
 
   const suffix = Date.now().toString(36);
   const job: Job = {
