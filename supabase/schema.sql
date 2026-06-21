@@ -167,6 +167,26 @@ create table if not exists public.activity_events (
 );
 create index if not exists activity_user_idx on public.activity_events (user_id, created_at desc);
 
+-- ─── Analytics events (page-view / visitor telemetry, admin-only) ───────────
+-- Captures anonymous + signed-in traffic for the admin dashboard. RLS is on with
+-- NO policies on purpose: only the service role (the track writer + admin reader)
+-- can touch it — ordinary users can neither read nor write.
+create table if not exists public.analytics_events (
+  id          bigint generated always as identity primary key,
+  created_at  timestamptz not null default now(),
+  visitor_id  text,                              -- anonymous per-device id (cookie)
+  user_id     uuid references auth.users(id) on delete set null,
+  event       text not null default 'page_view',
+  path        text,
+  referrer    text,
+  user_agent  text,
+  meta        jsonb default '{}'
+);
+create index if not exists analytics_created_idx on public.analytics_events (created_at desc);
+create index if not exists analytics_visitor_idx on public.analytics_events (visitor_id);
+create index if not exists analytics_event_idx   on public.analytics_events (event);
+create index if not exists analytics_user_idx    on public.analytics_events (user_id);
+
 -- ─── Row Level Security ─────────────────────────────────────────────────────
 alter table public.profiles         enable row level security;
 alter table public.send_credentials enable row level security;
@@ -176,6 +196,7 @@ alter table public.payments         enable row level security;
 alter table public.jobs             enable row level security;
 alter table public.plans            enable row level security;
 alter table public.activity_events  enable row level security;
+alter table public.analytics_events enable row level security; -- no policies → service-role only
 
 drop policy if exists "own profile" on public.profiles;
 create policy "own profile" on public.profiles for all using (auth.uid() = id) with check (auth.uid() = id);

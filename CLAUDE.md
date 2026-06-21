@@ -161,8 +161,26 @@ APP_URL=https://www.feasters.cloud              # build return/result/redirect U
 APPLY_ENCRYPTION_KEY                            # 32-byte hex, encrypts secrets
 CRON_SECRET                                     # protects /api/cron/apply + /api/cron/notify
 NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT   # Web Push
+ADMIN_EMAILS                                    # comma-separated emails allowed into /admin
 ```
 `.env.local` is gitignored. `.env.example` has blank placeholders (safe to commit).
+
+**Admin & analytics** (`src/lib/admin.ts`, `/admin`, `/api/admin/*`,
+`/api/analytics/track`, `analytics_events` table): a backend-gated control centre.
+`ADMIN_EMAILS` (comma/space separated, server-only — never sent to the client)
+decides who's an admin. `getAdminUser()` gates the `/admin` layout (redirects
+non-admins) AND every `/api/admin/*` route (403) — defence in depth;
+`/api/admin/check` only leaks a boolean so the shell shows/hides the nav link.
+`AnalyticsTracker` (mounted in `layout.tsx`) beacons a page-view to
+`/api/analytics/track` on each route change; the route writes to `analytics_events`
+via the service role and sets an httpOnly `fx_vid` visitor cookie (covers anon +
+signed-in; `/api/analytics` is PUBLIC in middleware so logged-out hits aren't
+bounced). `analytics_events` has RLS on with **no policies** → service role only.
+The dashboard aggregates everything in `/api/admin/overview`: users/paid/MRR/
+revenue, applications, live visitors, a 14-day traffic chart, plan mix, top pages,
+recent payments/signups, and a "who's doing what" feed.
+Setup: run `supabase/migrations/003_analytics_events.sql` in the SQL editor + set
+`ADMIN_EMAILS` in Vercel.
 
 **Web Push** (`src/lib/push.ts`, `/api/push/{subscribe,unsubscribe}`,
 `/api/cron/notify`, push handlers in `public/sw.js`, `NotificationBell` in the

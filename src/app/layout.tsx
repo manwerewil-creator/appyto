@@ -3,6 +3,7 @@ import { Inter_Tight } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/app-shell";
 import { Toaster } from "@/components/ui/sonner";
+import AnalyticsTracker from "@/app/_components/AnalyticsTracker";
 
 // Matches rylolabz.com — Inter Tight, self-hosted by Next for zero layout shift.
 const interTight = Inter_Tight({
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={interTight.variable}>
       <body>
         <AppShell>{children}</AppShell>
+        <AnalyticsTracker />
         <Toaster />
         <script
           // Register the minimal install-enabling service worker (public/sw.js).
