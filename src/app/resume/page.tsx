@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import ResumeSheet from "./Templates";
-import { TEMPLATES, SAMPLE_RESUME, type Resume, type Experience, type Education, type Skill } from "@/lib/resume";
+import { TEMPLATES, SAMPLE_RESUME, DEFAULT_RESUME, type Resume, type Experience, type Education, type Skill } from "@/lib/resume";
 import b from "./builder.module.css";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
@@ -37,7 +37,7 @@ export default function ResumeBuilder() {
   const roRef = useRef<ResizeObserver>();
   const builderRoRef = useRef<ResizeObserver>();
 
-  useEffect(() => { fetch("/api/resume").then((x) => x.json()).then(setR); }, []);
+  useEffect(() => { fetch("/api/resume").then((x) => x.json()).then(setR).catch(() => setR(DEFAULT_RESUME)); }, []);
 
   // Measure the preview frame and scale the 793.7px (210mm) A4 sheet to fit it
   // exactly — so the preview adapts to any column/screen width with no overflow.
@@ -66,14 +66,18 @@ export default function ResumeBuilder() {
   // Two columns only when there's genuinely room for a usable form + preview.
   const twoCol = builderW >= 900;
 
-  // Debounced autosave.
+  // Debounced autosave. Only flag "Saved" when the write actually succeeds.
   useEffect(() => {
     if (!r) return;
     setSaved(false);
     clearTimeout(t.current);
     t.current = setTimeout(async () => {
-      await fetch("/api/resume", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(r) });
-      setSaved(true);
+      try {
+        const res = await fetch("/api/resume", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(r) });
+        setSaved(res.ok);
+      } catch {
+        setSaved(false);
+      }
     }, 600);
     return () => clearTimeout(t.current);
   }, [r]);

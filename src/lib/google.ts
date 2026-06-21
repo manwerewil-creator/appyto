@@ -63,7 +63,9 @@ export async function exchangeCode(code: string, origin: string): Promise<TokenR
 export function emailFromIdToken(idToken?: string): string | null {
   if (!idToken) return null;
   try {
-    const payload = JSON.parse(Buffer.from(idToken.split(".")[1], "base64").toString("utf8"));
+    const parts = idToken.split(".");
+    if (parts.length !== 3) return null;          // not a well-formed JWT
+    const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
     return typeof payload.email === "string" ? payload.email : null;
   } catch {
     return null;

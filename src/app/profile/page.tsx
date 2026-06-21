@@ -70,9 +70,9 @@ export default function ProfilePage() {
   const [resUploading, setResUploading] = useState(false);
 
   useEffect(() => {
-    fetch("/api/profile").then((r) => r.json()).then(setP);
+    fetch("/api/profile").then((r) => r.json()).then(setP).catch(() => {});
     fetch("/api/facets").then((r) => r.json())
-      .then((d) => setCatSuggest((d.categories ?? []).slice(0, 12).map((c: any) => c.value)))
+      .then((d) => setCatSuggest((d.categories ?? []).slice(0, 12).map((c: any) => c?.value).filter(Boolean)))
       .catch(() => {});
   }, []);
 

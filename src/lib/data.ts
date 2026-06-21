@@ -6,19 +6,24 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Job, ResourceLink, ResourceFile } from "./types";
 import type { Resume } from "./resume";
 import { DEFAULT_RESUME } from "./resume";
+import { cleanCompany } from "./company";
 
 type SB = SupabaseClient;
+
+// Strip the job-board source / generic site account out of `company` so it never
+// reaches matching, the email engine or the UI. Single choke point for all reads.
+const scrub = (j: Job): Job => ({ ...j, company: cleanCompany(j.company) });
 
 // ── Jobs (public read) ─────────────────────────────────────────────────────
 export async function fetchJobs(sb: SB, limit = 5000): Promise<Job[]> {
   const { data } = await sb
     .from("jobs").select("*").eq("is_open", true)
     .order("posted_at", { ascending: false }).limit(limit);
-  return (data ?? []) as Job[];
+  return ((data ?? []) as Job[]).map(scrub);
 }
 export async function fetchJobById(sb: SB, id: string): Promise<Job | null> {
   const { data } = await sb.from("jobs").select("*").eq("id", id).maybeSingle();
-  return (data as Job) ?? null;
+  return data ? scrub(data as Job) : null;
 }
 export async function upsertJob(sb: SB, job: Job): Promise<void> {
   await sb.from("jobs").upsert(job, { onConflict: "id" });
@@ -62,7 +67,8 @@ export async function saveCreds(sb: SB, userId: string, patch: Record<string, un
 export async function fetchApplications(sb: SB, userId: string) {
   const { data } = await sb.from("applications").select("*")
     .eq("user_id", userId).order("created_at", { ascending: false });
-  return data ?? [];
+  // Scrub source names from rows logged before sanitisation existed.
+  return (data ?? []).map((a) => ({ ...a, company: cleanCompany(a.company) }));
 }
 export async function hasApplied(sb: SB, userId: string, jobId: string): Promise<boolean> {
   const { data } = await sb.from("applications").select("id")

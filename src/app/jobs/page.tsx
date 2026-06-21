@@ -41,9 +41,17 @@ export default function JobsPage() {
       search, category, location, type, page: String(p), pageSize: "25",
       ...(onlyEmail ? { onlyEmail: "1" } : {}),
     });
-    const r = await fetch(`/api/jobs?${qs}`);
-    const d = await r.json();
-    setItems(d.items); setFiltered(d.filtered); setPage(d.page); setLoading(false);
+    try {
+      const r = await fetch(`/api/jobs?${qs}`);
+      const d = await r.json();
+      setItems(Array.isArray(d.items) ? d.items : []);
+      setFiltered(d.filtered ?? 0);
+      setPage(d.page ?? p);
+    } catch {
+      setItems([]); setFiltered(0);
+    } finally {
+      setLoading(false);
+    }
   }, [search, category, location, type, onlyEmail]);
 
   useEffect(() => { const t = setTimeout(() => load(1), 250); return () => clearTimeout(t); }, [load]);
@@ -87,16 +95,16 @@ export default function JobsPage() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight">Jobs in Zimbabwe</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Jobs in Zimbabwe</h1>
         <p className="text-sm text-muted-foreground">
           Browse all {filtered.toLocaleString()} open jobs.
         </p>
       </div>
 
-      {/* Search + filter pills */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Search + filter pills — search takes the full row on mobile, filters wrap below */}
+      <div className="flex flex-wrap items-center gap-2.5">
         <GlassSearch
-          containerClassName="min-w-[240px] flex-1"
+          containerClassName="w-full sm:min-w-[240px] sm:flex-1"
           placeholder="Search job title, skill, company"
           value={search}
           onChange={setSearch}

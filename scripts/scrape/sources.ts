@@ -130,11 +130,12 @@ const applynow: SourceConfig = {
       source_uid: String(post.id),
       url: post.link,
       title,
-      // applynow titles often read "<Org> is hiring: <Role>"
+      // applynow titles often read "<Org> is hiring: <Role>". Never fall back to
+      // the post author — on applynow that's the site account ("ApplyNOW"), which
+      // would leak the source into the UI as a company name.
       company:
         (title.match(/^(.*?)\s+is hiring/i)?.[1] ?? null) ||
         companyFromBody(text) ||
-        post._embedded?.author?.[0]?.name ||
         null,
       location,
       category: cats[0] ?? null,

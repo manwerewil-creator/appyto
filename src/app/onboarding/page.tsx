@@ -45,8 +45,8 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetch("/api/profile").then((r) => r.json()).then(setP);
-    fetch("/api/settings").then((r) => r.json()).then((s) => setEmailReady(!!s.smtp_verified));
+    fetch("/api/profile").then((r) => r.json()).then(setP).catch(() => setP(null));
+    fetch("/api/settings").then((r) => r.json()).then((s) => setEmailReady(!!s.smtp_verified)).catch(() => {});
   }, []);
 
   if (!p) {

@@ -59,10 +59,12 @@ export default function ComposeModal({
           if (r.wantsId) labels.push("ID copy");
           if (r.referenceCode) labels.push(`Ref: ${r.referenceCode}`);
           setReqs(labels);
+        } else {
+          setError(d.error ?? "Couldn't prepare this email. You can still write it below.");
         }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { setError("Couldn't prepare this email. Check your connection and try again."); setLoading(false); });
   }, [job.id]);
 
   const send = async () => {
