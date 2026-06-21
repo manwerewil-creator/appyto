@@ -26,18 +26,31 @@ export async function confirmPayment(
   const now = new Date().toISOString();
   const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   const planId = pay.plan_id as PlanId;
+  const cap = PLANS[planId].dailyApplyCap;
+
+  // Order matters: GRANT the plan first (this is what unlocks features), then
+  // record the subscription, and only mark the payment "paid" LAST. If we marked
+  // it paid first and a later write failed, the next poll would short-circuit on
+  // status==="paid" and the user would never get what they paid for. All writes
+  // are idempotent, so a retry safely re-runs until everything lands.
+  const { error: profileErr } = await admin
+    .from("profiles").update({ plan_id: planId, daily_cap: cap }).eq("id", pay.user_id);
+  if (profileErr) throw new Error(`Could not activate plan: ${profileErr.message}`);
+
+  await admin.from("subscriptions").upsert(
+    { user_id: pay.user_id, plan_id: planId, status: "active", period_end: periodEnd },
+    { onConflict: "user_id" },
+  );
 
   await admin.from("payments")
     .update({ status: "paid", paid_at: now }).eq("reference", reference);
-  await admin.from("subscriptions").upsert(
-    { user_id: pay.user_id, plan_id: pay.plan_id, status: "active", period_end: periodEnd },
-    { onConflict: "user_id" },
-  );
-  await admin.from("profiles")
-    .update({ plan_id: pay.plan_id, daily_cap: PLANS[planId].dailyApplyCap }).eq("id", pay.user_id);
-  await logActivity(admin, pay.user_id, "plan_upgraded",
-    `Upgraded to ${PLANS[planId].name} — $${pay.amount_usd}/mo`,
-    { plan_id: pay.plan_id, amount_usd: pay.amount_usd, reference });
+
+  // Non-critical: never let a feed-logging hiccup undo a successful upgrade.
+  try {
+    await logActivity(admin, pay.user_id, "plan_upgraded",
+      `Upgraded to ${PLANS[planId].name} — $${pay.amount_usd}/mo`,
+      { plan_id: planId, amount_usd: pay.amount_usd, reference });
+  } catch { /* ignore */ }
 
   return { status: "paid" };
 }
