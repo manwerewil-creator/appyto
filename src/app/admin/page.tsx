@@ -1,14 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   Users, Crown, DollarSign, Repeat, Send, Eye, RefreshCw, Radio, TrendingUp,
-  Activity as ActivityIcon, CreditCard, UserPlus, BarChart3, AlertTriangle, type LucideIcon,
+  Activity as ActivityIcon, CreditCard, UserPlus, BarChart3, AlertTriangle, KeyRound,
+  type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 // ── Types mirror /api/admin/overview ─────────────────────────────────────────
@@ -77,6 +82,50 @@ function Panel({ title, Icon, children, action }: { title: string; Icon: LucideI
         {children}
       </CardContent>
     </Card>
+  );
+}
+
+// In-dashboard password change for the signed-in admin. Uses Supabase Auth's
+// updateUser — the session is already established, so no current-password
+// re-entry is needed (Supabase requires a valid session to change it).
+function ChangePassword() {
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    if (pw.length < 8) { toast.error("Use at least 8 characters."); return; }
+    if (pw !== pw2) { toast.error("Passwords don't match."); return; }
+    setBusy(true);
+    const { error } = await createClient().auth.updateUser({ password: pw });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    setPw(""); setPw2("");
+    toast.success("Password updated.");
+  };
+
+  return (
+    <Panel title="Account security" Icon={KeyRound}>
+      <p className="mb-3 text-sm text-muted-foreground">
+        Change the password for your admin account ({" "}
+        <span className="font-medium text-foreground">while signed in</span> ). Takes effect immediately.
+      </p>
+      <div className="grid gap-3 sm:max-w-md">
+        <div className="grid gap-1.5">
+          <Label htmlFor="new-pw">New password</Label>
+          <Input id="new-pw" type="password" autoComplete="new-password"
+            value={pw} onChange={(e) => setPw(e.target.value)} placeholder="At least 8 characters" />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="new-pw2">Confirm new password</Label>
+          <Input id="new-pw2" type="password" autoComplete="new-password"
+            value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Re-enter password" />
+        </div>
+        <Button onClick={save} disabled={busy} className="w-full sm:w-auto">
+          {busy ? "Saving…" : "Update password"}
+        </Button>
+      </div>
+    </Panel>
   );
 }
 
@@ -316,6 +365,9 @@ export default function AdminDashboard() {
           </div>
         </>
       )}
+
+      {/* Always available, even if metrics fail to load */}
+      <ChangePassword />
     </div>
   );
 }
