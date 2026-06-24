@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Briefcase, Target, Send, Inbox, FileText, Crown, Settings, LogOut, Menu,
-  Home, Sparkles, ClipboardCheck, ShieldCheck, type LucideIcon,
+  Home, Sparkles, ClipboardCheck, type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/use-user";
@@ -53,24 +53,18 @@ const PAGE_TITLES: { match: string; title: string }[] = [
   { match: "/settings", title: "Settings" },
   { match: "/profile", title: "Profile" },
   { match: "/onboarding", title: "Set up your profile" },
-  { match: "/admin", title: "Admin" },
 ];
 const titleFor = (path: string) =>
   path === "/" ? "Overview" : (PAGE_TITLES.find((p) => path.startsWith(p.match))?.title ?? "Feasters");
 
-function NavLinks({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin?: boolean }) {
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = usePathname();
-  // Admins get an extra entry; it never renders for ordinary users (the link is
-  // only added when the backend admin check passes).
-  const items = isAdmin
-    ? [...NAV, { href: "/admin", label: "Admin", Icon: ShieldCheck, highlight: false }]
-    : NAV;
   return (
     <nav className="flex flex-1 flex-col gap-1">
       <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
         Menu
       </p>
-      {items.map(({ href, label, Icon, highlight }) => {
+      {NAV.map(({ href, label, Icon, highlight }) => {
         const active = isActivePath(path, href);
         return (
           <Link
@@ -201,20 +195,13 @@ function BottomNav() {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const path = usePathname();
 
-  // Backend-gated: the Admin link only shows when ADMIN_EMAILS includes this user.
-  // The email list never reaches the client — we only learn a boolean.
-  useEffect(() => {
-    fetch("/api/admin/check")
-      .then((r) => r.json())
-      .then((d) => setIsAdmin(!!d.admin))
-      .catch(() => {});
-  }, []);
-
-  // Welcome / login / auth screens render without the app chrome.
-  if (path === "/welcome" || path === "/login" || path.startsWith("/auth")) return <>{children}</>;
+  // Screens that render WITHOUT the user app chrome: welcome / login / auth, and
+  // the admin control centre — it has its own separate shell (see /admin), so it
+  // never inherits the user sidebar/nav. There is deliberately no link to it.
+  if (path === "/welcome" || path === "/login" || path.startsWith("/auth") || path.startsWith("/admin"))
+    return <>{children}</>;
   const title = titleFor(path);
   return (
     <div className="min-h-screen bg-muted/30">
@@ -222,7 +209,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-52 flex-col gap-1 border-r bg-gradient-to-b from-background to-muted/20 p-3 lg:flex">
         <Brand />
         <div className="my-1" />
-        <NavLinks isAdmin={isAdmin} />
+        <NavLinks />
         <UserFooter />
       </aside>
 
@@ -238,7 +225,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <SheetContent side="left" className="flex w-72 flex-col gap-1 p-3">
               <Brand />
               <div className="my-1" />
-              <NavLinks onNavigate={() => setOpen(false)} isAdmin={isAdmin} />
+              <NavLinks onNavigate={() => setOpen(false)} />
               <UserFooter />
             </SheetContent>
           </Sheet>
