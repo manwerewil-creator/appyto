@@ -207,6 +207,38 @@ editor and set the three VAPID vars in Vercel. Generate keys:
 - Dev: `npm run dev` — we use **port 3010** (`next dev -p 3010`), matching APP_URL.
   Don't run `npm run build` / delete `.next` while a dev server is running (it kills it).
 
+## 8.5 Internship platform (VisionBridge — merged in)
+A second product (an internship/attachment marketplace, internally "VisionBridge")
+is **merged into this same app** — one deploy, one Supabase, one domain, one login.
+- **Roles** live in `vb_profiles.role` (`student|company|university|admin`). All
+  internship tables are prefixed `vb_*` (`vb_profiles, vb_opportunities,
+  vb_applications, vb_payments, vb_messages, vb_notifications`) so they never
+  collide with the Feasters tables. Schema: `supabase/migrations/004_visionbridge.sql`
+  (tables + RLS + `vb_my_role()` helper + a signup trigger + `vb-documents` storage
+  bucket). **Already applied to production.**
+- **Signup trigger** (`handle_new_vb_user`) creates a `vb_profiles` row **only when
+  the signup metadata carries a `role`** — i.e. internship registrations via
+  `/register`. Feasters job-seekers sign up without a role and get NO vb row (or
+  they'd be misrouted into the internship side).
+- **Shared login, routed by role:** `auth/callback` checks `vb_profiles` first — a
+  role account goes to its dashboard (`/student` [→ `/pay` if unpaid], `/company`,
+  `/university`, `/admin`); everyone else follows the Feasters job-seeker flow.
+- **Routes:** `/student/*`, `/company/*`, `/university/*`, `/register`, `/pay`.
+  Each role area has its own role-aware shell `src/components/vb/app-shell.tsx`, so
+  `src/components/app-shell.tsx` (the Feasters shell) **self-excludes** those paths
+  (same as `/admin`). `useProfile` (`src/lib/vb/use-profile.ts`) is the client gate.
+- **Namespacing:** VB code lives under `src/components/vb/*` (`ui`, `icons`,
+  `app-shell`, `messages`) and `src/lib/vb/*` (`types`, `use-profile`); it reuses the
+  shared `@/lib/supabase/client`. VB's design tokens were ported into the host
+  `tailwind.config.ts` as **additive** colors (`ink/paper/surface/faint/line/brand/
+  danger`); VB's `accent`→`grass` and `muted`→`dim` were **renamed** to avoid
+  clashing with the shadcn `accent`/`muted` (don't reintroduce the clash).
+- **Admin is unified:** the owner `/admin` dashboard shows internship KPIs via the
+  `internships` block in `/api/admin/overview` (service-role reads of `vb_*`). There
+  is no separate internship admin UI.
+- **Student fee** (`/pay`, $10) is still a **demo gateway** (writes `vb_payments`,
+  flips `vb_profiles.paid`). Wire it to Paynow (`src/lib/paynow.ts`) for real money.
+
 ## 9. ⚠️ Gotchas already hit (so you don't repeat them)
 - **Scraper `.ts` imports** keep `.ts` extensions (tsx needs them); `scripts/` is
   excluded from tsconfig so Next's type-check ignores them. Intra-`src/lib` imports

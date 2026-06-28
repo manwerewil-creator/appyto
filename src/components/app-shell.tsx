@@ -197,10 +197,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
 
-  // Screens that render WITHOUT the user app chrome: welcome / login / auth, and
-  // the admin control centre — it has its own separate shell (see /admin), so it
-  // never inherits the user sidebar/nav. There is deliberately no link to it.
-  if (path === "/welcome" || path === "/login" || path.startsWith("/auth") || path.startsWith("/admin"))
+  // Screens that render WITHOUT the user (job-seeker) app chrome:
+  //  • welcome / login / register / auth — pre-auth screens
+  //  • /admin — the owner control centre (its own separate shell)
+  //  • the internship areas — student/company/university/register/pay each bring
+  //    their own role-aware shell (components/vb/app-shell), so the Feasters
+  //    sidebar must not double-wrap them.
+  const standalone = ["/welcome", "/login", "/register", "/pay", "/student", "/company", "/university"];
+  if (path.startsWith("/auth") || path.startsWith("/admin") || standalone.some((p) => path === p || path.startsWith(p + "/")))
     return <>{children}</>;
   const title = titleFor(path);
   return (

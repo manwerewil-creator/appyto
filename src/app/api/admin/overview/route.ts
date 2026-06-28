@@ -139,6 +139,44 @@ export async function GET() {
       return { type: a.type, summary: a.summary, at: a.created_at, email: prof?.email ?? null, name: prof?.full_name ?? null };
     });
 
+  // ── Internships (VisionBridge) — one unified admin. Degrades to ready:false
+  //    if the vb_* tables aren't migrated yet. Service role bypasses RLS.
+  let internships: {
+    ready: boolean; students: number; companies: number; universities: number; paidStudents: number;
+    opportunities: number; openOpportunities: number; applications: number;
+    byStatus: Record<string, number>; revenueUsd: number;
+  };
+  try {
+    const [vbProfilesRes, vbOppsRes, vbOppsOpenRes, vbAppsRes, vbPayRes] = await Promise.all([
+      sb.from("vb_profiles").select("role,paid").limit(20000),
+      sb.from("vb_opportunities").select("*", { count: "exact", head: true }),
+      sb.from("vb_opportunities").select("*", { count: "exact", head: true }).eq("status", "open"),
+      sb.from("vb_applications").select("status").limit(20000),
+      sb.from("vb_payments").select("amount,status").eq("status", "completed").limit(20000),
+    ]);
+    if (vbProfilesRes.error) throw vbProfilesRes.error;
+    const vp = (vbProfilesRes.data ?? []) as { role: string | null; paid: boolean | null }[];
+    const roleCount = (r: string) => vp.filter((x) => x.role === r).length;
+    const apps = (vbAppsRes.data ?? []) as { status: string | null }[];
+    const byStatus: Record<string, number> = {};
+    for (const a of apps) { const s = a.status ?? "pending"; byStatus[s] = (byStatus[s] ?? 0) + 1; }
+    const pays = (vbPayRes.data ?? []) as { amount: number | string }[];
+    internships = {
+      ready: true,
+      students: roleCount("student"),
+      companies: roleCount("company"),
+      universities: roleCount("university"),
+      paidStudents: vp.filter((x) => x.role === "student" && x.paid).length,
+      opportunities: vbOppsRes.count ?? 0,
+      openOpportunities: vbOppsOpenRes.count ?? 0,
+      applications: apps.length,
+      byStatus,
+      revenueUsd: pays.reduce((s, p) => s + Number(p.amount || 0), 0),
+    };
+  } catch {
+    internships = { ready: false, students: 0, companies: 0, universities: 0, paidStudents: 0, opportunities: 0, openOpportunities: 0, applications: 0, byStatus: {}, revenueUsd: 0 };
+  }
+
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     analyticsReady,
@@ -151,5 +189,6 @@ export async function GET() {
     recentPayments,
     recentSignups,
     recentActivity,
+    internships,
   });
 }
