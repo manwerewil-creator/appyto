@@ -26,3 +26,9 @@ export const PLANS: Record<PlanId, Plan> = {
 
 export const PLAN_LIST = Object.values(PLANS).sort((a, b) => a.priceUsd - b.priceUsd);
 export const PAID_PLANS = PLAN_LIST.filter((p) => p.isPaid);
+
+// The Internships section is an upgrade feature — Pro and Premium unlock it.
+// (Single source of truth: change this list to widen/narrow access.)
+export const INTERNSHIP_PLANS: PlanId[] = ["pro", "premium"];
+export const canAccessInternships = (planId?: string | null): boolean =>
+  !!planId && (INTERNSHIP_PLANS as string[]).includes(planId);

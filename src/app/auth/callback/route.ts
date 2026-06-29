@@ -55,24 +55,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(msg)}`);
   }
 
-  // One shared login, routed by role. Internship (VisionBridge) accounts carry a
-  // role in vb_profiles and go straight to their dashboard; an unpaid student is
-  // sent to the $10 gate first. Everyone else is a Feasters job-seeker.
-  const { data: vb } = await supabase
-    .from("vb_profiles").select("role, paid").eq("id", user.id).maybeSingle();
-
-  let dest: string;
-  if (vb?.role) {
-    dest =
-      vb.role === "company" ? "/company" :
-      vb.role === "university" ? "/university" :
-      vb.role === "admin" ? "/admin" :
-      vb.paid ? "/student" : "/pay";
-  } else {
-    const { data: profile } = await supabase
-      .from("profiles").select("onboarded").eq("id", user.id).maybeSingle();
-    dest = profile?.onboarded ? "/" : "/onboarding";
-  }
+  // New users land on onboarding; returning users go straight to the dashboard.
+  const { data: profile } = await supabase
+    .from("profiles").select("onboarded").eq("id", user.id).maybeSingle();
+  const dest = profile?.onboarded ? "/" : "/onboarding";
   await logActivity(supabase, user.id, "signed_in", "Signed in");
 
   const res = NextResponse.redirect(`${origin}${dest}`);

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Users, Crown, DollarSign, Repeat, Send, Eye, RefreshCw, Radio, TrendingUp,
   Activity as ActivityIcon, CreditCard, UserPlus, BarChart3, AlertTriangle, KeyRound,
-  GraduationCap, Building2, Landmark, Briefcase, type LucideIcon,
+  type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,11 +29,6 @@ interface Overview {
   recentPayments: { email: string | null; name: string | null; plan: string; amount: number; status: string; at: string }[];
   recentSignups: { email: string | null; name: string | null; plan: string; at: string | null }[];
   recentActivity: { type: string; summary: string | null; at: string; email: string | null; name: string | null }[];
-  internships: {
-    ready: boolean; students: number; companies: number; universities: number; paidStudents: number;
-    opportunities: number; openOpportunities: number; applications: number;
-    byStatus: Record<string, number>; revenueUsd: number;
-  };
 }
 
 const PLAN_NAMES: Record<string, string> = { free: "Free", free_plus: "Free+", base: "Base", pro: "Pro", premium: "Premium" };
@@ -289,40 +284,6 @@ export default function AdminDashboard() {
               )}
             </Panel>
           </div>
-
-          {/* Internship platform (VisionBridge) */}
-          {d.internships && (
-            <Panel title="Internship platform" Icon={GraduationCap}
-              action={d.internships.ready
-                ? <span className="text-xs text-muted-foreground">{money(d.internships.revenueUsd)} in student fees</span>
-                : <Badge variant="warning">Not set up</Badge>}>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                {[
-                  { label: "Students", value: d.internships.students, Icon: GraduationCap, tint: "bg-blue-50 text-blue-600" },
-                  { label: "Companies", value: d.internships.companies, Icon: Building2, tint: "bg-violet-50 text-violet-600" },
-                  { label: "Universities", value: d.internships.universities, Icon: Landmark, tint: "bg-amber-50 text-amber-600" },
-                  { label: "Paid students", value: d.internships.paidStudents, Icon: DollarSign, tint: "bg-emerald-50 text-emerald-600" },
-                  { label: "Open roles", value: d.internships.openOpportunities, Icon: Briefcase, tint: "bg-sky-50 text-sky-600" },
-                  { label: "Applications", value: d.internships.applications, Icon: Send, tint: "bg-rose-50 text-rose-600" },
-                ].map((k) => (
-                  <div key={k.label} className="rounded-xl border bg-card p-3">
-                    <div className={cn("grid h-8 w-8 place-items-center rounded-lg", k.tint)}><k.Icon className="h-4 w-4" /></div>
-                    <div className="mt-2 text-xl font-bold tabular-nums leading-tight">{fmt(k.value)}</div>
-                    <div className="truncate text-xs text-muted-foreground">{k.label}</div>
-                  </div>
-                ))}
-              </div>
-              {Object.keys(d.internships.byStatus).length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {Object.entries(d.internships.byStatus).map(([s, n]) => (
-                    <span key={s} className="rounded-full bg-muted px-2.5 py-1 text-xs capitalize text-muted-foreground">
-                      {s}: <span className="font-semibold tabular-nums text-foreground">{fmt(n)}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </Panel>
-          )}
 
           {/* Recent payments */}
           <Panel title="Recent payments" Icon={CreditCard}

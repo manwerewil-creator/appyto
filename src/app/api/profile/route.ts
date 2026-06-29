@@ -28,6 +28,7 @@ export async function GET() {
     desired_job_types: p?.desired_job_types ?? [],
     keywords: p?.keywords ?? [],
     cover_letter_template: p?.cover_letter_template ?? "",
+    plan_id: p?.plan_id ?? "free",
     daily_cap: p?.daily_cap ?? 0,
     onboarded: p?.onboarded ?? false,
     cv_filename: cv_path ? cv_path.split("/").pop() : null,

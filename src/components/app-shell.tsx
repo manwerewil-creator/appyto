@@ -6,8 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Briefcase, Target, Send, Inbox, FileText, Crown, Settings, LogOut, Menu,
-  Home, Sparkles, ClipboardCheck, Search, MessageSquare, User, PlusCircle, Building2,
-  GraduationCap, BarChart3, type LucideIcon,
+  Home, Sparkles, ClipboardCheck, GraduationCap, type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/use-user";
@@ -19,98 +18,43 @@ import NotificationBell from "@/app/_components/NotificationBell";
 import { cn } from "@/lib/utils";
 
 type NavItem = { href: string; label: string; Icon: LucideIcon; highlight?: boolean };
-type Mode = "seeker" | "student" | "company" | "university";
 
-// One app, many modes. The nav adapts to which part of the product you're in —
-// the per-area auth gate (useProfile) guarantees only the right role can be here,
-// so the path alone determines the mode (no extra round-trip).
-const NAV: Record<Mode, NavItem[]> = {
-  seeker: [
-    { href: "/", label: "Overview", Icon: LayoutDashboard },
-    { href: "/jobs", label: "All Jobs", Icon: Briefcase },
-    { href: "/matches", label: "My Matches", Icon: Target },
-    { href: "/internships", label: "Internships", Icon: GraduationCap },
-    { href: "/quick-apply", label: "Quick Apply", Icon: Send },
-    { href: "/applications", label: "Applications", Icon: Inbox },
-    { href: "/resume", label: "CV Builder", Icon: FileText },
-    { href: "/billing", label: "Upgrade", Icon: Crown, highlight: true },
-  ],
-  student: [
-    { href: "/student", label: "Dashboard", Icon: LayoutDashboard },
-    { href: "/student/browse", label: "Internships", Icon: Search },
-    { href: "/student/applications", label: "Applications", Icon: Inbox },
-    { href: "/student/messages", label: "Messages", Icon: MessageSquare },
-    { href: "/student/profile", label: "Profile", Icon: User },
-  ],
-  company: [
-    { href: "/company", label: "Dashboard", Icon: LayoutDashboard },
-    { href: "/company/post", label: "Post a role", Icon: PlusCircle },
-    { href: "/company/messages", label: "Messages", Icon: MessageSquare },
-    { href: "/company/profile", label: "Company", Icon: Building2 },
-  ],
-  university: [
-    { href: "/university", label: "Dashboard", Icon: LayoutDashboard },
-    { href: "/university/students", label: "Students", Icon: GraduationCap },
-    { href: "/university/reports", label: "Reports", Icon: BarChart3 },
-  ],
-};
+// Sidebar / mobile-drawer navigation for the job-seeker app. Internships is just
+// a plan-gated, internship-filtered slice of the same job board (see /internships).
+const NAV: NavItem[] = [
+  { href: "/", label: "Overview", Icon: LayoutDashboard },
+  { href: "/jobs", label: "All Jobs", Icon: Briefcase },
+  { href: "/matches", label: "My Matches", Icon: Target },
+  { href: "/internships", label: "Internships", Icon: GraduationCap },
+  { href: "/quick-apply", label: "Quick Apply", Icon: Send },
+  { href: "/applications", label: "Applications", Icon: Inbox },
+  { href: "/resume", label: "CV Builder", Icon: FileText },
+  { href: "/billing", label: "Upgrade", Icon: Crown, highlight: true },
+];
 
-// Mobile bottom bar per mode (max 5).
-const BOTTOM: Record<Mode, NavItem[]> = {
-  seeker: [
-    { href: "/", label: "Home", Icon: Home },
-    { href: "/jobs", label: "Jobs", Icon: Briefcase },
-    { href: "/matches", label: "Matches", Icon: Sparkles },
-    { href: "/quick-apply", label: "Apply", Icon: Send },
-    { href: "/applications", label: "Applied", Icon: ClipboardCheck },
-  ],
-  student: NAV.student,
-  company: NAV.company,
-  university: NAV.university,
-};
-
-const HOME: Record<Mode, string> = { seeker: "/", student: "/student", company: "/company", university: "/university" };
-const PROFILE_HREF: Record<Mode, string> = {
-  seeker: "/profile", student: "/student/profile", company: "/company/profile", university: "/university",
-};
-
-function modeFor(path: string): Mode {
-  if (path.startsWith("/student")) return "student";
-  if (path.startsWith("/company")) return "company";
-  if (path.startsWith("/university")) return "university";
-  return "seeker";
-}
+// Mobile bottom bar (max 5).
+const BOTTOM: NavItem[] = [
+  { href: "/", label: "Home", Icon: Home },
+  { href: "/jobs", label: "Jobs", Icon: Briefcase },
+  { href: "/matches", label: "Matches", Icon: Sparkles },
+  { href: "/quick-apply", label: "Apply", Icon: Send },
+  { href: "/applications", label: "Applied", Icon: ClipboardCheck },
+];
 
 const isActivePath = (path: string, href: string) =>
-  href === "/" || href === "/student" || href === "/company" || href === "/university"
-    ? path === href
-    : path.startsWith(href);
+  href === "/" ? path === href : path.startsWith(href);
 
 // Section title shown in the top panel (brown). Most-specific paths first.
 const PAGE_TITLES: { match: string; title: string }[] = [
   { match: "/jobs", title: "All Jobs" },
   { match: "/matches", title: "My Matches" },
+  { match: "/internships", title: "Internships" },
   { match: "/quick-apply", title: "Quick Apply" },
   { match: "/applications", title: "Applications" },
   { match: "/resume", title: "CV Builder" },
   { match: "/billing", title: "Upgrade" },
   { match: "/settings", title: "Settings" },
   { match: "/onboarding", title: "Set up your profile" },
-  { match: "/internships", title: "Internships" },
-  { match: "/student/browse", title: "Internships" },
-  { match: "/student/applications", title: "Applications" },
-  { match: "/student/messages", title: "Messages" },
-  { match: "/student/opportunity", title: "Internship" },
-  { match: "/student/profile", title: "Profile" },
-  { match: "/student", title: "Dashboard" },
-  { match: "/company/post", title: "Post a role" },
-  { match: "/company/messages", title: "Messages" },
-  { match: "/company/opportunity", title: "Applicants" },
-  { match: "/company/profile", title: "Company profile" },
-  { match: "/company", title: "Dashboard" },
-  { match: "/university/students", title: "Students" },
-  { match: "/university/reports", title: "Reports" },
-  { match: "/university", title: "Dashboard" },
   { match: "/profile", title: "Profile" },
 ];
 const titleFor = (path: string) =>
@@ -155,16 +99,16 @@ function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
   );
 }
 
-function Brand({ home }: { home: string }) {
+function Brand() {
   return (
-    <Link href={home} className="flex items-center gap-2.5 px-2 py-1">
+    <Link href="/" className="flex items-center gap-2.5 px-2 py-1">
       <Image src="/logo.png" alt="Feasters" width={34} height={34} priority />
       <span className="text-lg font-extrabold tracking-tight">Feasters</span>
     </Link>
   );
 }
 
-function UserFooter({ profileHref }: { profileHref: string }) {
+function UserFooter() {
   const router = useRouter();
   const { email, name, avatar } = useUser();
   const signOut = async () => {
@@ -174,7 +118,7 @@ function UserFooter({ profileHref }: { profileHref: string }) {
   return (
     <div className="mt-auto space-y-2 border-t pt-3">
       <PwaInstall fullWidth />
-      <Link href={profileHref} className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-muted">
+      <Link href="/profile" className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-muted">
         <UserAvatar src={avatar} name={name} email={email} className="h-9 w-9 text-xs" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold leading-tight">{name ?? "Your account"}</p>
@@ -188,33 +132,29 @@ function UserFooter({ profileHref }: { profileHref: string }) {
   );
 }
 
-// Right-hand actions in the top panel. The notifications + email settings are
-// job-seeker features, so they only show in seeker mode; the avatar links to the
-// right profile for the current mode.
-function TopBarActions({ mode, profileHref }: { mode: Mode; profileHref: string }) {
+// Right-hand actions in the top panel: notifications, email settings, profile.
+function TopBarActions() {
   const path = usePathname();
   const { email, name, avatar } = useUser();
   return (
     <div className="ml-auto flex items-center gap-1">
-      {mode === "seeker" && <NotificationBell />}
-      {mode === "seeker" && (
-        <Link
-          href="/settings"
-          aria-label="Settings"
-          className={cn(
-            "grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-accent",
-            isActivePath(path, "/settings") ? "text-primary" : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Settings className="h-5 w-5" strokeWidth={1.75} />
-        </Link>
-      )}
+      <NotificationBell />
       <Link
-        href={profileHref}
+        href="/settings"
+        aria-label="Settings"
+        className={cn(
+          "grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-accent",
+          isActivePath(path, "/settings") ? "text-primary" : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        <Settings className="h-5 w-5" strokeWidth={1.75} />
+      </Link>
+      <Link
+        href="/profile"
         aria-label="Profile"
         className={cn(
           "rounded-full ring-2 ring-offset-2 ring-offset-background transition hover:ring-primary/40",
-          path.startsWith(profileHref) ? "ring-primary/60" : "ring-transparent",
+          path.startsWith("/profile") ? "ring-primary/60" : "ring-transparent",
         )}
       >
         <UserAvatar src={avatar} name={name} email={email} className="h-9 w-9 text-xs" />
@@ -258,29 +198,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
 
-  // Screens that render WITHOUT the app shell: pre-auth (welcome/login/register),
-  // the focused checkout (/pay), the OAuth callback, and the owner control centre
-  // (/admin has its own shell). Everything else — job-seeker AND the internship
-  // modes — shares this one role-adaptive shell.
-  const bare = ["/welcome", "/login", "/register", "/pay"];
+  // Screens that render WITHOUT the app shell: the pre-auth screens (welcome /
+  // login), the OAuth callback, and the owner control centre (/admin has its own
+  // shell). Everything else uses this one shell.
+  const bare = ["/welcome", "/login"];
   if (path.startsWith("/auth") || path.startsWith("/admin") || bare.some((p) => path === p || path.startsWith(p + "/")))
     return <>{children}</>;
 
-  const mode = modeFor(path);
-  const items = NAV[mode];
-  const bottom = BOTTOM[mode];
-  const home = HOME[mode];
-  const profileHref = PROFILE_HREF[mode];
   const title = titleFor(path);
 
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-52 flex-col gap-1 border-r bg-gradient-to-b from-background to-muted/20 p-3 lg:flex">
-        <Brand home={home} />
+        <Brand />
         <div className="my-1" />
-        <NavLinks items={items} />
-        <UserFooter profileHref={profileHref} />
+        <NavLinks items={NAV} />
+        <UserFooter />
       </aside>
 
       {/* Content column (sits right of the desktop sidebar) */}
@@ -291,23 +225,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Button variant="ghost" size="icon" aria-label="Menu" className="lg:hidden"><Menu className="h-5 w-5" /></Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex w-72 flex-col gap-1 p-3">
-              <Brand home={home} />
+              <Brand />
               <div className="my-1" />
-              <NavLinks items={items} onNavigate={() => setOpen(false)} />
-              <UserFooter profileHref={profileHref} />
+              <NavLinks items={NAV} onNavigate={() => setOpen(false)} />
+              <UserFooter />
             </SheetContent>
           </Sheet>
 
           <h1 className="truncate text-base font-bold tracking-tight text-[#7c4a21] sm:text-lg">{title}</h1>
 
-          <TopBarActions mode={mode} profileHref={profileHref} />
+          <TopBarActions />
         </header>
 
         {/* Main content — reserves space for the fixed bottom bar on mobile */}
         <main className="pb-safe-nav lg:pb-0">{children}</main>
       </div>
 
-      <BottomNav items={bottom} />
+      <BottomNav items={BOTTOM} />
     </div>
   );
 }

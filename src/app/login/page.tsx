@@ -297,14 +297,6 @@ export default function LoginPage() {
             </>
           )}
         </p>
-
-        {/* Coordinated entry into the internship side of the platform. */}
-        <p className="mt-3 text-center text-xs text-muted-foreground">
-          A student, employer or university?{" "}
-          <a href="/register" className="font-semibold text-primary underline-offset-4 hover:underline">
-            Join the internship platform
-          </a>
-        </p>
       </motion.div>
     </div>
   );
