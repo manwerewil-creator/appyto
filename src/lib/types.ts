@@ -52,6 +52,7 @@ export interface Profile extends JobPreferences {
   cover_letter_template: string;  // the user's own custom email template
   daily_cap: number;              // safety limit on auto-applies per day
   onboarded: boolean;
+  auto_send: boolean;             // true = send instantly on Apply; false = preview & edit first
   resources: ResourceLink[];      // extra links relevant to applications
   resource_files: ResourceFile[]; // extra uploaded documents
 }
@@ -99,6 +100,7 @@ export const DEFAULT_PROFILE: Profile = {
   cover_letter_template: "",
   daily_cap: 25,
   onboarded: false,
+  auto_send: false,
   resources: [],
   resource_files: [],
   desired_titles: [],

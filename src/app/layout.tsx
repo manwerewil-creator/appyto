@@ -31,6 +31,9 @@ export const viewport: Viewport = {
   themeColor: "#2563eb",
   width: "device-width",
   initialScale: 1,
+  // Let content extend under the notch / home indicator so the safe-area
+  // padding (safe-bottom / pb-safe-nav) renders like a native app.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

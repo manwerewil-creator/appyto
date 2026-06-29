@@ -9,11 +9,16 @@ export interface Plan {
   isPaid: boolean;
   blurb: string;
   features: string[];
+  /** Total applications a user may ever send on this tier (free tiers). Omit = unlimited. */
+  lifetimeSendLimit?: number;
 }
 
+// Free tier: total applications a user can send before they must upgrade.
+export const FREE_SEND_LIMIT = 5;
+
 export const PLANS: Record<PlanId, Plan> = {
-  free:      { id: "free", name: "Free", priceUsd: 0, dailyApplyCap: 0, isPaid: false,
-               blurb: "Browse and apply manually.", features: ["Browse all jobs", "Manual apply", "CV builder"] },
+  free:      { id: "free", name: "Free", priceUsd: 0, dailyApplyCap: 0, isPaid: false, lifetimeSendLimit: FREE_SEND_LIMIT,
+               blurb: "Send 5 applications free, then upgrade.", features: ["5 free applications", "Browse all jobs", "CV builder"] },
   free_plus: { id: "free_plus", name: "Free+", priceUsd: 0, dailyApplyCap: 5, isPaid: false,
                blurb: "Unlock auto-apply with your own Gemini key.", features: ["Everything in Free", "Auto-apply 5/day", "Smarter matching"] },
   base:      { id: "base", name: "Base", priceUsd: 17, dailyApplyCap: 15, isPaid: true,
@@ -32,3 +37,7 @@ export const PAID_PLANS = PLAN_LIST.filter((p) => p.isPaid);
 export const INTERNSHIP_PLANS: PlanId[] = ["pro", "premium"];
 export const canAccessInternships = (planId?: string | null): boolean =>
   !!planId && (INTERNSHIP_PLANS as string[]).includes(planId);
+
+// Total applications allowed on a plan before the user must upgrade (null = unlimited).
+export const sendLimitOf = (planId?: string | null): number | null =>
+  PLANS[(planId as PlanId) ?? "free"]?.lifetimeSendLimit ?? null;

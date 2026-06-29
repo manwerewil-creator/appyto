@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { toast } from "sonner";
 import { AnimatePresence } from "framer-motion";
 import JobBoardCard from "../_components/JobBoardCard";
+import ComposeModal from "../_components/ComposeModal";
+import QuotaBanner from "../_components/QuotaBanner";
+import { useApplyFlow } from "../_components/useApplyFlow";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GlassSearch } from "@/components/ui/glass-search";
@@ -26,9 +28,8 @@ export default function JobsPage() {
   const [location, setLocation] = useState("");
   const [type, setType] = useState("");
   const [onlyEmail, setOnlyEmail] = useState(false);
-  const [applyingId, setApplyingId] = useState<string | null>(null);
   const [passed, setPassed] = useState<Set<string>>(new Set());
-  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const { quota, applyingId, appliedIds, composeJob, setComposeJob, apply, onComposeSent } = useApplyFlow();
   const [facets, setFacets] = useState<{ categories: Facet[]; locations: Facet[]; types: Facet[] }>({
     categories: [], locations: [], types: [],
   });
@@ -58,22 +59,6 @@ export default function JobsPage() {
 
   const pages = Math.ceil(filtered / 25);
 
-  const applyOne = async (job: Job) => {
-    setApplyingId(job.id);
-    const r = await fetch("/api/apply", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_id: job.id }),
-    });
-    const d = await r.json();
-    if (d.ok) {
-      setAppliedIds((s) => new Set(s).add(job.id));
-      toast.success("Application sent", { description: job.title });
-    } else {
-      toast.error("Could not apply", { description: d.reason ?? "Please try again." });
-    }
-    setApplyingId(null);
-  };
-
   const passOne = (job: Job) => {
     setPassed((s) => new Set(s).add(job.id));
   };
@@ -84,7 +69,7 @@ export default function JobsPage() {
     value: string; onChange: (v: string) => void; placeholder: string; opts: Facet[];
   }) => (
     <div className="relative">
-      <select className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
+      <select aria-label={placeholder} className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{placeholder}</option>
         {opts.map((f) => <option key={f.value} value={f.value}>{f.value} ({f.n})</option>)}
       </select>
@@ -100,6 +85,8 @@ export default function JobsPage() {
           Browse all {filtered.toLocaleString()} open jobs.
         </p>
       </div>
+
+      <QuotaBanner quota={quota} />
 
       {/* Search + filter pills — search takes the full row on mobile, filters wrap below */}
       <div className="flex flex-wrap items-center gap-2.5">
@@ -142,7 +129,7 @@ export default function JobsPage() {
                 key={j.id}
                 job={{ ...j, applied: appliedIds.has(j.id) }}
                 index={i}
-                onApply={applyOne}
+                onApply={apply}
                 onPass={passOne}
                 applying={applyingId === j.id}
               />
@@ -163,6 +150,10 @@ export default function JobsPage() {
             Next <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+      )}
+
+      {composeJob && (
+        <ComposeModal job={composeJob} onClose={() => setComposeJob(null)} onSent={onComposeSent} />
       )}
     </div>
   );

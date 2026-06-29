@@ -16,6 +16,10 @@ export interface ComposeProfile {
   phone?: string | null;
   hasResourceLinks?: boolean;   // does the user have portfolio/links saved?
   hasResourceFiles?: boolean;   // does the user have extra documents saved?
+  // Personalisation: concrete facts about the applicant, drawn from their CV /
+  // onboarding. When present they make the pitch specific instead of generic.
+  headline?: string | null;     // e.g. "Senior Accountant" (CV headline / current role / desired title)
+  skills?: string[] | null;     // a few real skill names from the CV builder
 }
 
 export interface ComposedEmail {
@@ -35,6 +39,9 @@ export function chooseTone(req: Requirements): Tone {
   if (req.sector === "finance" || req.sector === "legal" || req.sector === "government" || req.sector === "ngo") {
     return req.seniority === "intern" || req.seniority === "junior" ? "warm" : "formal";
   }
+  // A bare, low-detail posting reads better with a short, to-the-point reply —
+  // except for executive roles, where substance is still expected.
+  if (req.terse && req.seniority !== "exec") return "concise";
   if (req.sector === "sales") return "enthusiastic";
   if (req.sector === "creative" || req.sector === "tech") return req.seniority === "intern" ? "warm" : "confident";
   if (req.sector === "health" || req.sector === "education") return "warm";
@@ -61,6 +68,30 @@ function requirementLines(req: Requirements, profile: ComposeProfile, rng: RNG):
 }
 
 /**
+ * A concrete, personalised "what I bring" line built from the applicant's real
+ * details (CV headline + a couple of real skills). Returned as a spintax template
+ * with [headline]/[skillA]/[skillB] tokens for the caller to spin + fill. When we
+ * have something specific to say it replaces the generic pitch, so the email reads
+ * like this person wrote it. Returns "" when we have nothing concrete.
+ */
+function personaTemplate(profile: ComposeProfile): string {
+  const hasHeadline = !!(profile.headline ?? "").trim();
+  const skillCount = (profile.skills ?? []).map((s) => (s ?? "").trim()).filter(Boolean).slice(0, 2).length;
+  const skillPhrase = skillCount === 2 ? "[skillA] and [skillB]" : skillCount === 1 ? "[skillA]" : "";
+
+  if (hasHeadline && skillPhrase) {
+    return `{As a [headline],|With my background as a [headline],|Coming in as a [headline],} I bring {hands-on|strong|practical|solid} ${skillPhrase} to {this role|the role|your team}.`;
+  }
+  if (hasHeadline) {
+    return `{As a [headline], I know what a role like this needs.|My experience as a [headline] lines up closely with what you are looking for.|I have built my career as a [headline], and this role fits where I want to go next.}`;
+  }
+  if (skillPhrase) {
+    return `I bring {hands-on|strong|practical|solid} ${skillPhrase}, which is {exactly what this role calls for|a close match for what you described|directly relevant here}.`;
+  }
+  return "";
+}
+
+/**
  * Compose one application email for a job. `seedSalt` lets callers fan out many
  * distinct variants (e.g. the 100-sample preview) from the same job.
  */
@@ -77,6 +108,7 @@ export function composeApplicationEmail(
   const rng = mulberry32(seed);
 
   const name = profile.full_name?.trim() || "Applicant";
+  const skills = (profile.skills ?? []).map((s) => (s ?? "").trim()).filter(Boolean).slice(0, 2);
   const vars: Record<string, string> = {
     name,
     title: job.title || "the role",
@@ -84,6 +116,9 @@ export function composeApplicationEmail(
     phone: profile.phone || "",
     email: profile.email || "",
     ref: requirements.referenceCode || "",
+    headline: (profile.headline ?? "").trim(),
+    skillA: skills[0] ?? "",
+    skillB: skills[1] ?? "",
   };
 
   // Subject. If the employer dictates a subject and gave a reference code, honour it.
@@ -96,7 +131,12 @@ export function composeApplicationEmail(
   // Body assembly: greeting, hook, pitch, fit, requirement lines, ask, sign-off.
   const greeting = fill(spin(pick(bank.greetings, rng), rng), vars);
   const opener = fill(spin(pick(bank.openers, rng), rng), vars);
-  const pitch = fill(spin(pick(bank.pitch, rng), rng), vars);
+  // When we know real facts about the applicant, lead "what I bring" with them;
+  // otherwise fall back to the tone's generic pitch.
+  const personaTpl = personaTemplate(profile);
+  const pitch = personaTpl
+    ? fill(spin(personaTpl, rng), vars)
+    : fill(spin(pick(bank.pitch, rng), rng), vars);
   const fitLine = fill(spin(pick(bank.fit, rng), rng), vars);
   const reqs = requirementLines(requirements, profile, rng).map((l) => fill(spin(l, rng), vars));
   const cta = fill(spin(pick(bank.cta, rng), rng), vars);

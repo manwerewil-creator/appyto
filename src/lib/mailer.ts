@@ -4,6 +4,7 @@
 import nodemailer from "nodemailer";
 import type { Job, ResourceLink, ResourceFile } from "./types";
 import type { CredsRow } from "./data";
+import type { Resume } from "./resume";
 import { decrypt } from "./crypto";
 import { composeApplicationEmail } from "./email";
 
@@ -23,6 +24,23 @@ export interface ProfileLike {
   cover_letter_template?: string | null;
   resources?: ResourceLink[] | null;       // extra links appended to every application
   resource_files?: ResourceFile[] | null;  // extra documents attached to applications
+  resume?: Resume | null;                   // CV builder doc — source of headline + real skills
+  desired_titles?: string[] | null;         // onboarding fallback for a headline
+}
+
+/** Pull concrete personalisation (headline + a few real skills) from the profile. */
+function derivePersona(profile: ProfileLike): { headline: string; skills: string[] } {
+  const r = profile.resume;
+  const headline =
+    r?.headline?.trim() ||
+    r?.experience?.[0]?.role?.trim() ||
+    profile.desired_titles?.find((t) => t?.trim())?.trim() ||
+    "";
+  const skills = (r?.skills ?? [])
+    .map((s) => s?.name?.trim())
+    .filter((x): x is string => !!x)
+    .slice(0, 3);
+  return { headline, skills };
 }
 
 /** Render the user's extra links as a plain-text block, or "" if none. */
@@ -88,12 +106,15 @@ export function buildEmail(job: Job, profile: ProfileLike) {
   }
 
   // Otherwise use the algorithmic engine: tone + spintax, adapted to the job.
+  const persona = derivePersona(profile);
   const composed = composeApplicationEmail(job, {
     full_name: profile.full_name,
     email: profile.email,
     phone: profile.phone,
     hasResourceLinks: !!(profile.resources && profile.resources.length),
     hasResourceFiles: !!(profile.resource_files && profile.resource_files.length),
+    headline: persona.headline,
+    skills: persona.skills,
   });
   return { subject: composed.subject, body: composed.body };
 }

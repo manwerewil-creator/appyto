@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight, ChevronLeft, ChevronRight, Check, Mail, Sparkles, KeyRound,
-  ExternalLink, ShieldCheck, UserRound, Briefcase, MapPin, PartyPopper, type LucideIcon,
+  ExternalLink, ShieldCheck, UserRound, Briefcase, MapPin, PartyPopper, Eye, Zap, Send, type LucideIcon,
 } from "lucide-react";
 
 // Official Google pages for setting up an app password.
@@ -26,6 +26,7 @@ const STEP_META: { short: string; title: string; desc: string; Icon: LucideIcon 
   { short: "Roles", title: "What you do", desc: "Your qualifications and the roles you want.", Icon: Briefcase },
   { short: "Setup", title: "Where & how", desc: "What kind of work setup are you after?", Icon: MapPin },
   { short: "Email", title: "Sending email", desc: "Applications send from your own inbox, so replies come straight to you.", Icon: Mail },
+  { short: "Send", title: "How to apply", desc: "Choose how your applications go out.", Icon: Send },
   { short: "Done", title: "All set", desc: "", Icon: PartyPopper },
 ];
 const TOTAL = STEP_META.length;
@@ -316,6 +317,44 @@ export default function Onboarding() {
           )}
 
           {step === 4 && (
+            <StepCard>
+              <div className="space-y-3">
+                {[
+                  { val: false as const, Icon: Eye, title: "Review before sending", desc: "We draft each application — you preview it, tweak the wording if you like, then send. Best if you want full control." },
+                  { val: true as const, Icon: Zap, title: "Send automatically", desc: "We send the tailored application the moment you tap Apply. The fastest way to apply to lots of jobs." },
+                ].map((opt) => {
+                  const active = !!p.auto_send === opt.val;
+                  return (
+                    <button
+                      key={String(opt.val)}
+                      type="button"
+                      onClick={() => set("auto_send", opt.val)}
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-xl border-2 p-4 text-left transition-colors",
+                        active ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
+                      )}
+                    >
+                      <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl",
+                        active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                        <opt.Icon className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">{opt.title}</p>
+                        <p className="text-sm text-muted-foreground">{opt.desc}</p>
+                      </div>
+                      <span className={cn("mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2",
+                        active ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/30")}>
+                        {active && <Check className="h-3 w-3" strokeWidth={3} />}
+                      </span>
+                    </button>
+                  );
+                })}
+                <p className="text-xs text-muted-foreground">You can change this anytime in Settings.</p>
+              </div>
+            </StepCard>
+          )}
+
+          {step === 5 && (
             <Card className="overflow-hidden">
               <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
                 <motion.div

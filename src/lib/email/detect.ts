@@ -23,6 +23,7 @@ export interface Requirements {
   referenceCode: string | null;   // a vacancy / reference code to quote
   subjectInBody: boolean;          // employer dictates an exact subject line
   deadline: string | null;         // raw deadline phrase, if found
+  terse: boolean;                  // the posting is short / bare — favour a concise reply
   seniority: Seniority;
   sector: Sector;
 }
@@ -73,6 +74,10 @@ export function detectRequirements(job: Pick<Job, "title" | "description" | "app
   const desc = (job.description ?? "").toLowerCase();
   const all = `${title} ${desc}`;
 
+  // A bare posting (few words of detail) reads better with a short, to-the-point
+  // reply than a full template — this drives the "concise" tone.
+  const descWords = desc.trim().split(/\s+/).filter(Boolean).length;
+
   const applyVia: Requirements["applyVia"] =
     job.apply_method === "email" || job.apply_email ? "email"
     : job.apply_method === "url" || job.apply_url ? "url"
@@ -90,6 +95,7 @@ export function detectRequirements(job: Pick<Job, "title" | "description" | "app
     referenceCode: findReferenceCode(`${job.title ?? ""} ${job.description ?? ""}`),
     subjectInBody: test(/\b(?:subject line|in the subject|email subject|subject should|use .{0,20} as the subject)\b/, all),
     deadline: findDeadline(`${job.title ?? ""} ${job.description ?? ""}`),
+    terse: descWords <= 30,
     seniority: detectSeniority(all),
     sector: detectSector(all),
   };

@@ -61,6 +61,8 @@ const PROFILE: ComposeProfile = {
   phone: "+263 77 123 4567",
   hasResourceLinks: true,
   hasResourceFiles: true,
+  headline: "Marketing & Communications Specialist",
+  skills: ["Campaign Management", "Social Media"],
 };
 
 async function main() {

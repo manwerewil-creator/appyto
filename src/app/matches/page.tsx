@@ -4,55 +4,30 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import JobCard from "../_components/JobCard";
-import ComposeModal, { type ComposeJob } from "../_components/ComposeModal";
+import ComposeModal from "../_components/ComposeModal";
+import QuotaBanner from "../_components/QuotaBanner";
+import { useApplyFlow } from "../_components/useApplyFlow";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, Eye, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PLANS, type PlanId } from "@/lib/plans";
 import type { Job } from "@/lib/types";
 
 type Match = Job & { score: number; reasons: string[]; applied: boolean };
 
 export default function MatchesPage() {
   const [data, setData] = useState<{ hasPrefs: boolean; count: number; applyable: number; items: Match[] } | null>(null);
-  const [applyingId, setApplyingId] = useState<string | null>(null);
   const [auto, setAuto] = useState<{ running: boolean; msg?: string }>({ running: false });
-  const [composeJob, setComposeJob] = useState<ComposeJob | null>(null);
-  // Preview-first by default: tapping Apply opens the composer to review/edit.
-  // Users who'd rather send instantly flip on auto-send (persisted per device).
-  const [autoSend, setAutoSend] = useState(false);
+  const { quota, applyingId, appliedIds, composeJob, setComposeJob, apply, onComposeSent, setAutoSend } = useApplyFlow();
+  const autoSend = quota?.autoSend ?? false;
+  // Auto-apply (the bulk action) needs a plan with a daily allowance.
+  const canAutoApply = !!quota && (PLANS[quota.planId as PlanId]?.dailyApplyCap ?? 0) > 0;
 
   const load = useCallback(async () => {
     const r = await fetch("/api/matches"); setData(await r.json());
   }, []);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setAutoSend(localStorage.getItem("featers:autoSend") === "1"); }, []);
-
-  const toggleAutoSend = (v: boolean) => {
-    setAutoSend(v);
-    localStorage.setItem("featers:autoSend", v ? "1" : "0");
-  };
-
-  const applyOne = async (job: Job) => {
-    // Default: preview the email so the user can check it before it goes out.
-    if (!autoSend) {
-      setComposeJob({ id: job.id, title: job.title, apply_email: job.apply_email });
-      return;
-    }
-    setApplyingId(job.id);
-    const r = await fetch("/api/apply", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_id: job.id }),
-    });
-    const d = await r.json();
-    if (!d.ok) {
-      toast.error("Could not apply", { description: d.reason ?? "Please try again." });
-    } else {
-      toast.success("Application sent", { description: job.title });
-    }
-    setApplyingId(null);
-    load();
-  };
 
   const runAuto = async () => {
     setAuto({ running: true, msg: "Sending applications…" });
@@ -72,11 +47,14 @@ export default function MatchesPage() {
             {data ? `${data.count.toLocaleString()} jobs match your profile` : "Scoring jobs…"}
           </p>
         </div>
-        <Button variant="success" onClick={runAuto} disabled={auto.running || !data?.applyable}>
+        <Button variant="success" onClick={runAuto} disabled={auto.running || !data?.applyable || !canAutoApply}
+          title={canAutoApply ? "Auto-apply to your matches" : "Auto-apply is available on a paid plan"}>
           {auto.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Auto-apply to {data?.applyable ?? 0}
         </Button>
       </div>
+
+      <QuotaBanner quota={quota} />
 
       {/* Send mode: preview each email (default) vs send instantly on Apply. */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3">
@@ -98,7 +76,7 @@ export default function MatchesPage() {
           role="switch"
           aria-checked={autoSend}
           aria-label="Auto-send without preview"
-          onClick={() => toggleAutoSend(!autoSend)}
+          onClick={() => setAutoSend(!autoSend)}
           className={cn(
             "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
             autoSend ? "bg-primary" : "bg-muted-foreground/30",
@@ -149,7 +127,7 @@ export default function MatchesPage() {
       ) : (
         <div className="space-y-3">
           {data.items.map((j) => (
-            <JobCard key={j.id} job={j} onApply={applyOne}
+            <JobCard key={j.id} job={{ ...j, applied: j.applied || appliedIds.has(j.id) }} onApply={apply}
               onCustomize={(job) => setComposeJob({ id: job.id, title: job.title, apply_email: job.apply_email })}
               applying={applyingId === j.id} />
           ))}
@@ -158,7 +136,7 @@ export default function MatchesPage() {
 
       {composeJob && (
         <ComposeModal job={composeJob} onClose={() => setComposeJob(null)}
-          onSent={() => { setComposeJob(null); load(); }} />
+          onSent={() => { onComposeSent(); load(); }} />
       )}
     </div>
   );

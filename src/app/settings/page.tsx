@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   ChevronRight, UserRound, Mail, MailCheck, KeyRound,
-  SlidersHorizontal, Crown, LogOut, Check, X, Loader2, ExternalLink,
+  SlidersHorizontal, Crown, LogOut, Check, X, Loader2, ExternalLink, Eye, Zap,
 } from "lucide-react";
 
 // Official Google pages for setting up an app password.
@@ -254,6 +254,36 @@ export default function SettingsPage() {
               className="overflow-hidden border-t bg-muted/20"
             >
               <div className="space-y-4 p-4">
+                {/* Send mode: review & edit each email (default) vs send instantly. */}
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-3.5 py-3">
+                  <div className="flex items-center gap-2.5">
+                    {prof.auto_send ? <Zap className="h-4 w-4 shrink-0 text-primary" /> : <Eye className="h-4 w-4 shrink-0 text-primary" />}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{prof.auto_send ? "Send automatically" : "Review before sending"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {prof.auto_send
+                          ? "Tapping Apply sends the email straight away."
+                          : "Tapping Apply opens the email so you can check and edit it first."}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={prof.auto_send}
+                    aria-label="Send automatically without preview"
+                    onClick={() => setProf({ ...prof, auto_send: !prof.auto_send })}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+                      prof.auto_send ? "bg-primary" : "bg-muted-foreground/30",
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
+                      prof.auto_send ? "translate-x-5" : "translate-x-0.5",
+                    )} />
+                  </button>
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="daily_cap" className="text-xs">Daily auto-apply limit</Label>
                   <Input id="daily_cap" type="number" min={0} max={500} value={prof.daily_cap}

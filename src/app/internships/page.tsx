@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
 import { AnimatePresence } from "framer-motion";
 import { GraduationCap, Lock, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import JobBoardCard from "../_components/JobBoardCard";
+import ComposeModal from "../_components/ComposeModal";
+import { useApplyFlow } from "../_components/useApplyFlow";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GlassSearch } from "@/components/ui/glass-search";
@@ -17,24 +18,15 @@ import type { Job } from "@/lib/types";
 // filtered to early-career roles and gated to the higher plans. The board itself
 // is the standard job board (apply by email with the user's profile & CV).
 export default function InternshipsPage() {
-  const [plan, setPlan] = useState<string | null>(null); // null = still loading the plan
+  const { quota, applyingId, appliedIds, composeJob, setComposeJob, apply, onComposeSent } = useApplyFlow();
   const [items, setItems] = useState<Job[]>([]);
   const [filtered, setFiltered] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [applyingId, setApplyingId] = useState<string | null>(null);
   const [passed, setPassed] = useState<Set<string>>(new Set());
-  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    fetch("/api/profile")
-      .then((r) => r.json())
-      .then((p) => setPlan((p?.plan_id as string) ?? "free"))
-      .catch(() => setPlan("free"));
-  }, []);
-
-  const allowed = plan != null && canAccessInternships(plan);
+  const allowed = quota != null && canAccessInternships(quota.planId);
 
   const load = useCallback(async (p: number) => {
     setLoading(true);
@@ -61,27 +53,11 @@ export default function InternshipsPage() {
 
   const pages = Math.ceil(filtered / 25);
 
-  const applyOne = async (job: Job) => {
-    setApplyingId(job.id);
-    const r = await fetch("/api/apply", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_id: job.id }),
-    });
-    const d = await r.json();
-    if (d.ok) {
-      setAppliedIds((s) => new Set(s).add(job.id));
-      toast.success("Application sent", { description: job.title });
-    } else {
-      toast.error("Could not apply", { description: d.reason ?? "Please try again." });
-    }
-    setApplyingId(null);
-  };
-
   const passOne = (job: Job) => setPassed((s) => new Set(s).add(job.id));
   const visible = items.filter((j) => !passed.has(j.id));
 
   // ── Loading the plan ────────────────────────────────────────────────────────
-  if (plan === null) {
+  if (quota === null) {
     return (
       <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <Skeleton className="h-9 w-64 rounded-lg" />
@@ -173,7 +149,7 @@ export default function InternshipsPage() {
                 key={j.id}
                 job={{ ...j, applied: appliedIds.has(j.id) }}
                 index={i}
-                onApply={applyOne}
+                onApply={apply}
                 onPass={passOne}
                 applying={applyingId === j.id}
               />
@@ -192,6 +168,10 @@ export default function InternshipsPage() {
             Next <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+      )}
+
+      {composeJob && (
+        <ComposeModal job={composeJob} onClose={() => setComposeJob(null)} onSent={onComposeSent} />
       )}
     </div>
   );

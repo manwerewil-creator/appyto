@@ -29,6 +29,7 @@ export async function GET() {
     keywords: p?.keywords ?? [],
     cover_letter_template: p?.cover_letter_template ?? "",
     plan_id: p?.plan_id ?? "free",
+    auto_send: p?.auto_send ?? false,
     daily_cap: p?.daily_cap ?? 0,
     onboarded: p?.onboarded ?? false,
     cv_filename: cv_path ? cv_path.split("/").pop() : null,
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
     patch.daily_cap = Math.max(0, Math.min(500, body.daily_cap));
   }
   if (typeof body.onboarded === "boolean") patch.onboarded = body.onboarded;
+  if (typeof body.auto_send === "boolean") patch.auto_send = body.auto_send;
   for (const k of STR_ARRAYS) {
     if (Array.isArray(body[k])) {
       patch[k] = (body[k] as unknown[]).map((s) => String(s).trim()).filter(Boolean);

@@ -37,6 +37,7 @@ export interface ProfileRow {
   keywords: string[]; cv_path: string | null; cover_letter_template: string | null;
   plan_id: string; daily_cap: number; onboarded: boolean; resume: Resume | null;
   resources: ResourceLink[] | null; resource_files: ResourceFile[] | null;
+  auto_send: boolean | null;
 }
 export async function fetchProfile(sb: SB, userId: string): Promise<ProfileRow | null> {
   const { data } = await sb.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -78,6 +79,13 @@ export async function hasApplied(sb: SB, userId: string, jobId: string): Promise
 export async function appliedToday(sb: SB, userId: string): Promise<number> {
   const { data } = await sb.rpc("applications_today", { p_user: userId });
   return (data as number) ?? 0;
+}
+// Lifetime count of successfully-sent applications (drives the free-tier limit).
+export async function sentApplicationsCount(sb: SB, userId: string): Promise<number> {
+  const { count } = await sb.from("applications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId).eq("status", "sent");
+  return count ?? 0;
 }
 export async function addApplication(sb: SB, row: Record<string, unknown>) {
   const { data, error } = await sb.from("applications").insert(row).select().maybeSingle();
