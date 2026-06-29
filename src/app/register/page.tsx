@@ -12,10 +12,9 @@ type RoleTab = "student" | "company" | "university";
 function Logo() {
   return (
     <Link href="/" className="flex items-center gap-2.5">
-      <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-ink text-white">
-        <Icon name="spark2" className="h-[18px] w-[18px]" />
-      </span>
-      <span className="text-[17px] font-extrabold tracking-tightest text-ink">VisionBridge</span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.png" alt="Feasters" width={32} height={32} className="rounded-lg" />
+      <span className="text-[17px] font-extrabold tracking-tightest text-ink">Feasters</span>
     </Link>
   );
 }
@@ -117,7 +116,7 @@ export default function RegisterPage() {
         <Logo />
         <div className="text-center">
           <h1 className="text-3xl font-extrabold tracking-tightest text-ink">Create your account</h1>
-          <p className="mt-1.5 text-[15px] text-dim">Join VisionBridge today</p>
+          <p className="mt-1.5 text-[15px] text-dim">Join Feasters today</p>
         </div>
       </div>
 
