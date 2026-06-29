@@ -16,16 +16,24 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
-  ChevronRight, UserRound, Mail, MailCheck, KeyRound,
-  SlidersHorizontal, Crown, LogOut, Check, X, Loader2, ExternalLink, Eye, Zap,
+  ChevronRight, UserRound, Mail, MailCheck, RefreshCw,
+  SlidersHorizontal, Crown, LogOut, Check, X, Loader2, Eye, Zap,
 } from "lucide-react";
 
-// Official Google pages for setting up an app password.
-const GMAIL_2SV = "https://myaccount.google.com/signinoptions/two-step-verification";
-const GMAIL_APP_PW = "https://myaccount.google.com/apppasswords";
+// The Google "G" mark, so "Connect with Google" reads as the real thing.
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+      <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
+      <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
+      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
+    </svg>
+  );
+}
 
 interface SettingsView {
-  smtp_host: string; smtp_port: number; smtp_user: string; has_pass: boolean; smtp_verified: boolean;
+  google_connected: boolean; google_email: string; google_configured: boolean;
 }
 
 type Expandable = "email" | "apply" | null;
@@ -36,8 +44,7 @@ export default function SettingsPage() {
   const { name, email, avatar } = useUser();
   const [s, setS] = useState<SettingsView | null>(null);
   const [prof, setProf] = useState<Profile | null>(null);
-  const [pass, setPass] = useState("");
-  const [busy, setBusy] = useState<"save" | "test" | "cap" | null>(null);
+  const [busy, setBusy] = useState<"cap" | "disc" | null>(null);
   const [open, setOpen] = useState<Expandable>(null);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -45,34 +52,24 @@ export default function SettingsPage() {
   useEffect(() => {
     load();
     fetch("/api/profile").then((r) => r.json()).then(setProf).catch(() => {});
-    // Deep-link from onboarding: open the Email connect section straight away.
-    if (new URLSearchParams(window.location.search).get("connect") === "email") {
-      setOpen("email");
-      window.history.replaceState({}, "", "/settings");
-    }
+    const sp = new URLSearchParams(window.location.search);
+    // Deep-link from onboarding, or a return from the Google OAuth flow.
+    if (sp.get("connect") === "email") setOpen("email");
+    const g = sp.get("google");
+    if (g === "connected") { setOpen("email"); toast.success("Gmail connected — you're ready to send applications."); }
+    else if (g === "notconfigured") { setOpen("email"); toast.error("Email sending isn't set up yet. Please try again later."); }
+    else if (g) { setOpen("email"); toast.error("Couldn't connect Gmail. Please try again."); }
+    if (sp.get("connect") || g) window.history.replaceState({}, "", "/settings");
   }, []);
 
-  const set = (patch: Partial<SettingsView>) => setS((p) => p ? { ...p, ...patch } : p);
-
-  const persistSmtp = async (): Promise<boolean> => {
-    if (!s) return false;
-    const addr = s.smtp_user.trim();
-    if (!addr) { toast.error("Enter your email address first."); return false; }
-    if (!pass && !s.has_pass) { toast.error("Enter your app password first."); return false; }
-    await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ smtp_host: s.smtp_host, smtp_port: s.smtp_port, smtp_user: addr, ...(pass ? { smtp_pass: pass } : {}) }) });
-    setPass(""); await load();
-    return true;
-  };
-  const saveSmtp = async () => { setBusy("save"); const ok = await persistSmtp(); setBusy(null); if (ok) toast.success("Saved. Now test the connection."); };
-  const test = async () => {
-    setBusy("test");
-    if (!(await persistSmtp())) { setBusy(null); return; }
-    const d = await (await fetch("/api/settings/test", { method: "POST" })).json();
-    setBusy(null);
-    if (d.ok) toast.success("Connected! Your email is ready to send applications.");
-    else toast.error(d.error ?? "Could not connect.");
+  // Sending = the user's own Gmail over OAuth. One tap to connect; no passwords.
+  const connectGoogle = () => { window.location.href = "/api/google/start?next=/settings"; };
+  const disconnectGoogle = async () => {
+    setBusy("disc");
+    await fetch("/api/google/disconnect", { method: "POST" });
     await load();
+    setBusy(null);
+    toast("Gmail disconnected.");
   };
 
   const saveCap = async () => {
@@ -100,8 +97,8 @@ export default function SettingsPage() {
     );
   }
 
-  const ready = s.smtp_verified;
-  const activeAddr = s.smtp_user;
+  const ready = s.google_connected;
+  const activeAddr = s.google_email;
 
   // ── Row primitives (iOS grouped-list style) ─────────────────────────────
   const Group = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -162,7 +159,7 @@ export default function SettingsPage() {
             icon={ready ? <MailCheck className="h-[18px] w-[18px]" strokeWidth={1.75} /> : <Mail className="h-[18px] w-[18px]" strokeWidth={1.75} />}
             tint={ready ? "bg-success/10 text-success" : "bg-primary/10 text-primary"}
             title="Email connect"
-            sub={ready ? <>Sending via {activeAddr} (SMTP)</> : "Connect the inbox we apply from"}
+            sub={ready ? <>Connected · {activeAddr || "Gmail"}</> : "Connect your Gmail in one tap"}
             trailing={
               <div className="flex items-center gap-2">
                 {ready
@@ -183,49 +180,39 @@ export default function SettingsPage() {
               className="overflow-hidden border-t bg-muted/20"
             >
               <div className="space-y-4 p-4">
-                {/* SMTP / App password — the only sending method */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <KeyRound className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
-                    <span className="text-sm font-semibold">Gmail app password (SMTP)</span>
-                    {s.smtp_verified && <Badge variant="success">Active</Badge>}
-                  </div>
-                  <div className="rounded-lg border bg-card p-3 text-xs leading-relaxed text-muted-foreground">
-                    <span className="font-semibold text-foreground">How to get a Gmail app password:</span>{" "}
-                    1) turn on{" "}
-                    <a href={GMAIL_2SV} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary underline underline-offset-2">2-Step Verification <ExternalLink className="h-3 w-3" /></a>,{" "}
-                    2) open{" "}
-                    <a href={GMAIL_APP_PW} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary underline underline-offset-2">App passwords <ExternalLink className="h-3 w-3" /></a>,{" "}
-                    3) choose <span className="font-medium text-foreground">Mail → Other</span>, name it <span className="font-medium text-foreground">Feasters</span>, tap Generate, and paste the 16-character code below.
-                    <span className="mt-1.5 block">Host <span className="font-medium text-foreground">smtp.gmail.com</span> · Port <span className="font-medium text-foreground">465</span> (or 587).</span>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="smtp_host" className="text-xs">SMTP host</Label>
-                      <Input id="smtp_host" value={s.smtp_host} onChange={(e) => set({ smtp_host: e.target.value })} />
+                {ready ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 px-4 py-3">
+                      <MailCheck className="h-5 w-5 shrink-0 text-success" strokeWidth={1.75} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">Gmail connected</p>
+                        <p className="truncate text-xs text-muted-foreground">Applications send from {activeAddr || "your Gmail"}, so replies come straight to you.</p>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="smtp_port" className="text-xs">Port</Label>
-                      <Input id="smtp_port" type="number" value={s.smtp_port} onChange={(e) => set({ smtp_port: Number(e.target.value) })} />
+                    <div className="flex flex-wrap gap-3">
+                      <Button variant="outline" onClick={connectGoogle} disabled={busy !== null}>
+                        <RefreshCw className="h-4 w-4" /> Reconnect
+                      </Button>
+                      <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={disconnectGoogle} disabled={busy !== null}>
+                        {busy === "disc" ? <><Loader2 className="h-4 w-4 animate-spin" /> Disconnecting…</> : "Disconnect"}
+                      </Button>
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="smtp_user" className="text-xs">Your email address</Label>
-                    <Input id="smtp_user" placeholder="you@gmail.com" value={s.smtp_user} onChange={(e) => set({ smtp_user: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="smtp_pass" className="text-xs">App password {s.has_pass && <span className="font-normal text-muted-foreground">(saved — blank keeps it)</span>}</Label>
-                    <Input id="smtp_pass" type="password" placeholder={s.has_pass ? "••••••••••••" : "16-character app password"} value={pass} onChange={(e) => setPass(e.target.value)} />
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <Button onClick={saveSmtp} disabled={busy !== null}>
-                      {busy === "save" ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save"}
+                ) : s.google_configured ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Connect your Gmail and we&rsquo;ll send each application from your own inbox, so replies come straight to you. No password to set up — Google handles it securely.
+                    </p>
+                    <Button onClick={connectGoogle} className="gap-2.5">
+                      <GoogleIcon className="h-[18px] w-[18px]" /> Connect with Google
                     </Button>
-                    <Button variant="success" onClick={test} disabled={busy !== null || (!s.has_pass && !pass)}>
-                      {busy === "test" ? <><Loader2 className="h-4 w-4 animate-spin" /> Testing…</> : "Test connection"}
-                    </Button>
+                    <p className="text-xs text-muted-foreground">We only ask for permission to send email on your behalf. You can disconnect anytime.</p>
                   </div>
-                </div>
+                ) : (
+                  <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    Email sending isn&rsquo;t available just yet. Please check back soon.
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

@@ -9,19 +9,24 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const origin = req.nextUrl.origin;
+  const sp = req.nextUrl.searchParams;
+
+  // Where to send the user back to (carried through OAuth `state`). Same-site only.
+  const stateRaw = sp.get("state") || "/settings";
+  const next = stateRaw.startsWith("/") ? stateRaw : "/settings";
+  const back = (status: string) => {
+    const sep = next.includes("?") ? "&" : "?";
+    return NextResponse.redirect(`${origin}${next}${sep}google=${status}`);
+  };
+
   const { sb, user } = await getAuth();
   if (!user) return NextResponse.redirect(`${origin}/login`);
 
-  const sp = req.nextUrl.searchParams;
   const code = sp.get("code");
-  if (sp.get("error") || !code) {
-    return NextResponse.redirect(`${origin}/settings?google=error`);
-  }
+  if (sp.get("error") || !code) return back("error");
 
   const tokens = await exchangeCode(code, origin);
-  if (tokens.error || !tokens.refresh_token) {
-    return NextResponse.redirect(`${origin}/settings?google=norefresh`);
-  }
+  if (tokens.error || !tokens.refresh_token) return back("norefresh");
 
   const fromEmail = emailFromIdToken(tokens.id_token) ?? "";
   await saveCreds(sb, user.id, {
@@ -33,5 +38,5 @@ export async function GET(req: NextRequest) {
   await logActivity(sb, user.id, "email_connected",
     `Connected Gmail${fromEmail ? ` (${fromEmail})` : ""}`, { method: "google", from_email: fromEmail });
 
-  return NextResponse.redirect(`${origin}/settings?google=connected`);
+  return back("connected");
 }

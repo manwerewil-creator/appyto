@@ -9,12 +9,8 @@ import { decrypt } from "./crypto";
 import { composeApplicationEmail } from "./email";
 
 export interface SendConfig {
-  method: "smtp" | "google";
   fromEmail: string;
-  smtpHost: string;
-  smtpPort: number;
-  smtpPass?: string;
-  googleRefresh?: string;
+  googleRefresh?: string;   // the user's Gmail OAuth refresh token (decrypted)
 }
 
 export interface ProfileLike {
@@ -53,42 +49,28 @@ function linksBlock(resources?: ResourceLink[] | null): string {
 /** Build a usable (decrypted) send config from a credentials row. */
 export function credsToConfig(c: CredsRow): SendConfig {
   return {
-    method: c.method,
     fromEmail: c.from_email ?? "",
-    smtpHost: c.smtp_host,
-    smtpPort: c.smtp_port,
-    smtpPass: c.secret_enc ? decrypt(c.secret_enc) : undefined,
     googleRefresh: c.google_refresh_enc ? decrypt(c.google_refresh_enc) : undefined,
   };
 }
 
-/** Is sending actually set up for this credentials row? */
+/** Has the user connected their Gmail (the only sending method)? */
 export function emailReady(c: CredsRow | null): boolean {
-  if (!c) return false;
-  return c.method === "google" ? !!c.google_refresh_enc : c.verified && !!c.secret_enc;
+  return !!c?.google_refresh_enc;
 }
 
+// Sending is always the user's own Gmail over OAuth2 — nodemailer refreshes the
+// short-lived access token from the stored refresh token on each send.
 export function makeTransport(c: SendConfig) {
-  if (c.method === "google" && c.googleRefresh) {
-    return nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        type: "OAuth2", user: c.fromEmail,
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        refreshToken: c.googleRefresh,
-      },
-    });
-  }
   return nodemailer.createTransport({
-    host: c.smtpHost, port: c.smtpPort, secure: c.smtpPort === 465,
-    auth: { user: c.fromEmail, pass: c.smtpPass },
+    service: "gmail",
+    auth: {
+      type: "OAuth2", user: c.fromEmail,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      refreshToken: c.googleRefresh,
+    },
   });
-}
-
-export async function verifyConfig(c: SendConfig): Promise<{ ok: boolean; error?: string }> {
-  try { await makeTransport(c).verify(); return { ok: true }; }
-  catch (err: any) { return { ok: false, error: String(err?.message ?? err) }; }
 }
 
 export function buildEmail(job: Job, profile: ProfileLike) {

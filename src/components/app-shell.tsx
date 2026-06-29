@@ -199,9 +199,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
 
   // Screens that render WITHOUT the app shell: the pre-auth screens (welcome /
-  // login), the OAuth callback, and the owner control centre (/admin has its own
-  // shell). Everything else uses this one shell.
-  const bare = ["/welcome", "/login"];
+  // login), the public legal pages (privacy / terms — also reachable logged-out
+  // and crawled by Google for OAuth verification), the OAuth callback, and the
+  // owner control centre (/admin has its own shell). Everything else uses this shell.
+  const bare = ["/welcome", "/login", "/privacy", "/terms"];
   if (path.startsWith("/auth") || path.startsWith("/admin") || bare.some((p) => path === p || path.startsWith(p + "/")))
     return <>{children}</>;
 

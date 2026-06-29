@@ -10,7 +10,7 @@ export async function POST() {
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   await saveCreds(sb, user.id, {
-    method: "smtp",
+    method: "google",
     google_refresh_enc: null,
     verified: false,
   });

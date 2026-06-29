@@ -13,13 +13,21 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
-  ArrowRight, ChevronLeft, ChevronRight, Check, Mail, Sparkles, KeyRound,
-  ExternalLink, ShieldCheck, UserRound, Briefcase, MapPin, PartyPopper, Eye, Zap, Send, type LucideIcon,
+  ArrowRight, ChevronLeft, Check, Mail, Sparkles,
+  ShieldCheck, UserRound, Briefcase, MapPin, PartyPopper, Eye, Zap, Send, type LucideIcon,
 } from "lucide-react";
 
-// Official Google pages for setting up an app password.
-const GMAIL_2SV = "https://myaccount.google.com/signinoptions/two-step-verification";
-const GMAIL_APP_PW = "https://myaccount.google.com/apppasswords";
+// The Google "G" mark, so "Connect with Google" reads as the real thing.
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+      <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
+      <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
+      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
+    </svg>
+  );
+}
 
 const STEP_META: { short: string; title: string; desc: string; Icon: LucideIcon }[] = [
   { short: "You", title: "About you", desc: "How employers will see and contact you.", Icon: UserRound },
@@ -42,12 +50,19 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [emailReady, setEmailReady] = useState(false);
   const [matchCount, setMatchCount] = useState<number | null>(null);
-  const [guideOpen, setGuideOpen] = useState(true);   // "App password" how-to (only method)
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then(setP).catch(() => setP(null));
-    fetch("/api/settings").then((r) => r.json()).then((s) => setEmailReady(!!s.smtp_verified)).catch(() => {});
+    fetch("/api/settings").then((r) => r.json()).then((s) => setEmailReady(!!s.google_connected)).catch(() => {});
+    // Restore position + show the result when returning from the Google OAuth flow.
+    const sp = new URLSearchParams(window.location.search);
+    const st = sp.get("step");
+    if (st !== null) setStep(Number(st) || 0);
+    const g = sp.get("google");
+    if (g === "connected") { setEmailReady(true); toast.success("Gmail connected — you're ready to apply."); }
+    else if (g) toast.error("Couldn't connect Gmail. You can try again, or skip and do it later.");
+    if (st !== null || g) window.history.replaceState({}, "", "/onboarding");
   }, []);
 
   if (!p) {
@@ -245,72 +260,28 @@ export default function Onboarding() {
             <StepCard>
               {emailReady ? (
                 <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success">
-                  <ShieldCheck className="h-4 w-4" /> Your email is connected — you&rsquo;re ready to auto-apply.
+                  <ShieldCheck className="h-4 w-4" /> Your Gmail is connected — you&rsquo;re ready to auto-apply.
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Gmail App Password (SMTP) — the only sending method */}
-                  <div className="overflow-hidden rounded-xl border">
-                    <button type="button" onClick={() => setGuideOpen((o) => !o)} aria-expanded={guideOpen}
-                      className="flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-muted/50">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                        <KeyRound className="h-[18px] w-[18px]" strokeWidth={1.75} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold">Connect with a Gmail App Password (SMTP)</p>
-                        <p className="text-sm text-muted-foreground">Takes about 2 minutes — follow the steps below.</p>
-                      </div>
-                      <ChevronRight className={cn("mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform", guideOpen && "rotate-90")} />
-                    </button>
-
-                    <AnimatePresence initial={false}>
-                      {guideOpen && (
-                        <motion.div
-                          initial={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                          animate={reduce ? { opacity: 1 } : { height: "auto", opacity: 1 }}
-                          exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                          transition={{ duration: reduce ? 0 : 0.25, ease: [0.2, 0.7, 0.2, 1] }}
-                          className="overflow-hidden border-t bg-muted/20"
-                        >
-                          <div className="space-y-4 p-4">
-                            <ol className="space-y-3">
-                              {[
-                                <>Turn on <b>2-Step Verification</b> for your Google account (app passwords only appear once it&rsquo;s on).{" "}
-                                  <a href={GMAIL_2SV} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2">Open 2-Step Verification <ExternalLink className="h-3 w-3" /></a></>,
-                                <>Go to <b>App passwords</b>.{" "}
-                                  <a href={GMAIL_APP_PW} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2">Open App passwords <ExternalLink className="h-3 w-3" /></a></>,
-                                <>For app choose <b>Mail</b>, for device pick <b>Other (Custom name)</b>, type <b>Feasters</b>, then tap <b>Generate</b>.</>,
-                                <>Google shows a <b>16-character password</b> — copy it. The spaces don&rsquo;t matter.</>,
-                                <>Open <b>email settings</b> below and, under <b>App password / SMTP</b>, enter your Gmail address and paste the password, then tap <b>Test connection</b>.</>,
-                              ].map((node, i) => (
-                                <li key={i} className="flex gap-3">
-                                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i + 1}</span>
-                                  <span className="text-sm leading-relaxed text-foreground">{node}</span>
-                                </li>
-                              ))}
-                            </ol>
-
-                            {/* Exact SMTP values */}
-                            <div className="rounded-lg border bg-card p-3">
-                              <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-success" /> Gmail SMTP settings</p>
-                              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                                <dt className="text-muted-foreground">Host</dt><dd className="font-medium">smtp.gmail.com</dd>
-                                <dt className="text-muted-foreground">Port</dt><dd className="font-medium">465 (SSL) — or 587 (TLS)</dd>
-                                <dt className="text-muted-foreground">Username</dt><dd className="font-medium">your full Gmail address</dd>
-                                <dt className="text-muted-foreground">Password</dt><dd className="font-medium">the 16-character app password</dd>
-                              </dl>
-                            </div>
-
-                            <Button asChild variant="outline">
-                              <a href="/settings?connect=email"><Mail className="h-4 w-4" /> Open email settings to finish <ArrowRight className="h-4 w-4" /></a>
-                            </Button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                  <div className="flex items-start gap-3 rounded-xl border bg-card p-4">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                      <Mail className="h-5 w-5" strokeWidth={1.75} />
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="font-semibold">Connect your Gmail</p>
+                      <p className="text-sm text-muted-foreground">One tap. We send each application from your own inbox, so employers reply straight to you. No password to set up — Google handles it securely.</p>
+                    </div>
                   </div>
 
-                  <p className="text-xs text-muted-foreground">You can skip this for now and connect later — auto-apply needs it before it can send.</p>
+                  <Button
+                    onClick={() => { window.location.href = "/api/google/start?next=" + encodeURIComponent("/onboarding?step=3"); }}
+                    className="gap-2.5"
+                  >
+                    <GoogleIcon className="h-[18px] w-[18px]" /> Connect with Google
+                  </Button>
+
+                  <p className="text-xs text-muted-foreground">You can skip this for now and connect later in Settings — auto-apply needs it before it can send.</p>
                 </div>
               )}
             </StepCard>
