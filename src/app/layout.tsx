@@ -25,6 +25,8 @@ export const metadata: Metadata = {
     apple: { url: "/apple-icon.png", sizes: "180x180" },
   },
   appleWebApp: { capable: true, title: "Feasters", statusBarStyle: "default" },
+  // Google Search Console site verification (for OAuth app verification ownership).
+  verification: { google: "UABlWu7-mPFFfnvSwmKMaUOSko4y8DNhJt5CxUQlSNc" },
 };
 
 export const viewport: Viewport = {
