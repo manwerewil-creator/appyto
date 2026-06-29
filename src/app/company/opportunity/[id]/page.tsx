@@ -117,7 +117,7 @@ export default function OpportunityPage() {
                     </div>
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold text-ink">{s?.full_name || "Unknown"}</p>
+                        <p className="font-semibold text-ink">{s?.full_name || app.applicant_name || "Applicant"}</p>
                         <Badge tone={app.status}>{app.status}</Badge>
                       </div>
                       <p className="flex items-center gap-1.5 text-sm text-dim">

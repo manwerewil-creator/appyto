@@ -42,6 +42,7 @@ export type Application = {
   status: "pending" | "shortlisted" | "interview" | "accepted" | "rejected";
   cover_note: string | null;
   cv_url: string | null;
+  applicant_name: string | null;
   created_at: string;
 };
 
