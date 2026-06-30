@@ -9,7 +9,7 @@ import { useApplyFlow } from "../_components/useApplyFlow";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GlassSearch } from "@/components/ui/glass-search";
-import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, RefreshCw } from "lucide-react";
 import type { Job } from "@/lib/types";
 
 interface Facet { value: string; n: number; }
@@ -28,6 +28,7 @@ export default function JobsPage() {
   const [location, setLocation] = useState("");
   const [type, setType] = useState("");
   const [onlyEmail, setOnlyEmail] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [passed, setPassed] = useState<Set<string>>(new Set());
   const { quota, applyingId, appliedIds, composeJob, setComposeJob, apply, onComposeSent } = useApplyFlow();
   const [facets, setFacets] = useState<{ categories: Facet[]; locations: Facet[]; types: Facet[] }>({
@@ -57,6 +58,17 @@ export default function JobsPage() {
 
   useEffect(() => { const t = setTimeout(() => load(1), 250); return () => clearTimeout(t); }, [load]);
 
+  // Pull the freshest jobs the scraper has added (and refresh the filter counts).
+  const refresh = async () => {
+    setRefreshing(true);
+    setPassed(new Set());
+    await Promise.all([
+      load(1),
+      fetch("/api/facets").then((r) => r.json()).then(setFacets).catch(() => {}),
+    ]);
+    setRefreshing(false);
+  };
+
   const pages = Math.ceil(filtered / 25);
 
   const passOne = (job: Job) => {
@@ -79,11 +91,16 @@ export default function JobsPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Jobs in Zimbabwe</h1>
-        <p className="text-sm text-muted-foreground">
-          Browse all {filtered.toLocaleString()} open jobs.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Jobs in Zimbabwe</h1>
+          <p className="text-sm text-muted-foreground">
+            Browse all {filtered.toLocaleString()} open jobs.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={refresh} disabled={refreshing || loading} className="shrink-0" title="Check for new jobs">
+          <RefreshCw className={refreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} /> Refresh
+        </Button>
       </div>
 
       <QuotaBanner quota={quota} />
