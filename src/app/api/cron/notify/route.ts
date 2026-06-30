@@ -41,16 +41,22 @@ export async function GET(req: NextRequest) {
   const now = new Date().toISOString();
   const startedAt = Date.now();
 
-  // Only users who actually have a push subscription are worth processing.
+  // Resumable paging (see /api/cron/apply): only users with a push subscription
+  // matter; process them in id order after the cursor so the GitHub Actions worker
+  // can loop until `done` across many sub-60s calls.
+  const PAGE = 1000;
+  const cursor = req.nextUrl.searchParams.get("cursor") ?? "";
   const { data: subRows } = await admin.from("push_subscriptions").select("user_id");
-  const userIds = [...new Set((subRows ?? []).map((r) => r.user_id as string))];
+  const allIds = [...new Set((subRows ?? []).map((r) => r.user_id as string))].sort();
+  const userIds = allIds.filter((id) => id > cursor).slice(0, PAGE);
 
   let notified = 0;
-  let stoppedEarly = false;
+  let stoppedEarly = false, lastId = cursor;
   const results: { user: string; newJobs: number; delivered: number }[] = [];
 
   for (const userId of userIds) {
     if (Date.now() - startedAt > BUDGET_MS) { stoppedEarly = true; break; }
+    lastId = userId;
     try {
     const { data: profile } = await admin
       .from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -101,5 +107,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, usersChecked: userIds.length, notified, stoppedEarly, results });
+  const done = !stoppedEarly && userIds.length < PAGE;
+  return NextResponse.json({
+    ok: true, usersChecked: userIds.length, notified, stoppedEarly, done, nextCursor: lastId, results,
+  });
 }

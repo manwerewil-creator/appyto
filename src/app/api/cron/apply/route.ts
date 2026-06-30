@@ -25,36 +25,49 @@ export async function GET(req: NextRequest) {
   const startedAt = Date.now();
   const admin = supabaseAdmin();
 
-  // Fetch the catalogue ONCE for the whole run (was re-fetched per user).
+  // Resumable paging: process onboarded users in id order, starting after the
+  // caller-supplied cursor. The GitHub Actions worker loops this endpoint with the
+  // returned `nextCursor` until `done`, so the whole base is processed across many
+  // sub-60s calls — escaping the Hobby function-time ceiling. A lone Vercel-cron
+  // call (no cursor) still works as a one-page fallback.
+  const PAGE = 1000;
+  const cursor = req.nextUrl.searchParams.get("cursor") ?? "";
+
+  let pq = admin.from("profiles").select("id, plan_id")
+    .eq("onboarded", true).order("id", { ascending: true }).limit(PAGE);
+  if (cursor) pq = pq.gt("id", cursor);
+  const { data: profiles } = await pq;
+
+  // Fetch the catalogue ONCE for this call (was re-fetched per user).
   const jobs = await fetchJobs(admin);
 
-  const { data: profiles } = await admin
-    .from("profiles").select("id, plan_id").eq("onboarded", true);
-
   const results: unknown[] = [];
-  let processed = 0, stoppedEarly = false;
+  let processed = 0, stoppedEarly = false, lastId = cursor;
   for (const p of profiles ?? []) {
     if (Date.now() - startedAt > BUDGET_MS) { stoppedEarly = true; break; }
     try {
       const cap = PLANS[(p.plan_id as PlanId) ?? "free"]?.dailyApplyCap ?? 0;
-      if (cap <= 0) continue;                       // free tier: no auto-apply
-      const creds = await fetchCreds(admin, p.id);
-      if (!emailReady(creds)) continue;             // hasn't connected email
-      processed++;
-      const r = await autoApply(admin, p.id, undefined, jobs);
-      if (r.attempted > 0 || r.sent > 0) results.push({ user: p.id, ...r });
+      if (cap > 0) {                                // free tier: no auto-apply
+        const creds = await fetchCreds(admin, p.id);
+        if (emailReady(creds)) {                    // skip users without email
+          processed++;
+          const r = await autoApply(admin, p.id, undefined, jobs);
+          if (r.attempted > 0 || r.sent > 0) results.push({ user: p.id, ...r });
+        }
+      }
     } catch (err) {
       // One user's failure must never abort the run for everyone else.
       results.push({ user: p.id, error: String((err as Error)?.message ?? err) });
     }
+    lastId = p.id as string; // advance only after the user is handled
   }
 
-  // NOTE: a single daily ≤60s (Hobby) invocation cannot send for many users
-  // sequentially (~4-6s/email). `stoppedEarly` flags when the budget bounded the
-  // run — the real fix is an off-Vercel send worker (see audit). Until then this
-  // degrades gracefully instead of being killed mid-flight.
+  // done = we drained this page within budget AND the page wasn't full (no more rows).
+  const pageLen = profiles?.length ?? 0;
+  const done = !stoppedEarly && pageLen < PAGE;
+
   return NextResponse.json({
-    ok: true, usersProcessed: processed, stoppedEarly,
-    elapsedMs: Date.now() - startedAt, results,
+    ok: true, usersProcessed: processed, stoppedEarly, done,
+    nextCursor: lastId, elapsedMs: Date.now() - startedAt, results,
   });
 }

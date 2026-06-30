@@ -1,0 +1,78 @@
+name: Auto-apply, notify & cleanup
+
+# Runs the daily-apply + push-notify engines on a GitHub-hosted runner (no Vercel
+# 60s function ceiling, no Hobby "one cron a day" limit). Each endpoint is
+# RESUMABLE: it processes a page of users, returns { done, nextCursor }, and we
+# loop it here until done — so the whole user base is handled across many sub-60s
+# calls. Also prunes old analytics rows to stay under Supabase's free DB cap.
+#
+# Vercel's daily crons (vercel.json) remain as a harmless fallback: applies are
+# deduped by the daily cap, notifications by each user's watermark.
+#
+# Required repo secrets (Settings → Secrets → Actions):
+#   CRON_SECRET                 same value as in Vercel (protects the endpoints)
+#   APP_URL                     https://www.feasters.cloud
+#   NEXT_PUBLIC_SUPABASE_URL    already set (used by the scraper)
+#   SUPABASE_SERVICE_ROLE_KEY   already set (used by the scraper)
+
+on:
+  schedule:
+    - cron: "30 */6 * * *"   # every 6 hours (offset 30m from the scraper)
+  workflow_dispatch:
+
+concurrency:
+  group: feasters-worker
+  cancel-in-progress: false
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Auto-apply (loop until done)
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          [ -n "${APP_URL:-}" ] && [ -n "${CRON_SECRET:-}" ] || { echo "Missing APP_URL/CRON_SECRET secret"; exit 1; }
+          cursor=""
+          for i in $(seq 1 300); do
+            resp=$(curl -s -m 75 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/apply?cursor=$cursor")
+            ok=$(echo "$resp" | jq -r '.ok // "false"')
+            if [ "$ok" != "true" ]; then echo "apply call $i not ok: $resp"; exit 1; fi
+            echo "apply #$i -> $(echo "$resp" | jq -c '{usersProcessed,stoppedEarly,done,nextCursor}')"
+            done=$(echo "$resp" | jq -r '.done')
+            cursor=$(echo "$resp" | jq -r '.nextCursor // ""')
+            if [ "$done" = "true" ]; then echo "apply complete after $i call(s)"; break; fi
+          done
+
+      - name: Push-notify (loop until done)
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          cursor=""
+          for i in $(seq 1 300); do
+            resp=$(curl -s -m 75 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/notify?cursor=$cursor")
+            ok=$(echo "$resp" | jq -r '.ok // "false"')
+            if [ "$ok" != "true" ]; then echo "notify call $i not ok: $resp"; exit 1; fi
+            echo "notify #$i -> $(echo "$resp" | jq -c '{usersChecked,notified,stoppedEarly,done,nextCursor}')"
+            done=$(echo "$resp" | jq -r '.done')
+            cursor=$(echo "$resp" | jq -r '.nextCursor // ""')
+            if [ "$done" = "true" ]; then echo "notify complete after $i call(s)"; break; fi
+          done
+
+      - name: Prune analytics older than 90 days
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          [ -n "${SUPABASE_URL:-}" ] && [ -n "${SERVICE_KEY:-}" ] || { echo "Supabase secrets missing — skipping"; exit 0; }
+          cutoff=$(date -u -d '90 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          echo "Deleting analytics_events older than $cutoff"
+          curl -s -X DELETE "$SUPABASE_URL/rest/v1/analytics_events?created_at=lt.$cutoff" \
+            -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" \
+            -H "Prefer: return=minimal" -w "cleanup HTTP %{http_code}\n" -o /dev/null
