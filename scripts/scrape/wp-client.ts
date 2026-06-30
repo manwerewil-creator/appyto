@@ -24,7 +24,14 @@ export async function fetchWithRetry(
   try {
     const res = await fetch(url, {
       ...init,
-      headers: { "User-Agent": UA, Accept: "application/json", ...init.headers },
+      // applynow.co.zw sits behind a WAF that 415s requests whose Accept is bare
+      // "*/*" or "application/json"; a browser-like Accept passes. Harmless to the
+      // other (un-WAF'd) WordPress sources, which 200 either way.
+      headers: {
+        "User-Agent": UA,
+        Accept: "application/json, text/plain, */*",
+        ...init.headers,
+      },
     });
     if ((res.status === 429 || res.status >= 500) && attempt < MAX) {
       const retryAfter = Number(res.headers.get("retry-after"));
@@ -87,8 +94,22 @@ export async function* crawlWp(opts: CrawlOptions): AsyncGenerator<WpPost> {
       if (opts.maxPages) totalPages = Math.min(totalPages, opts.maxPages);
     }
 
-    const batch = (await res.json()) as WpPost[];
-    if (!Array.isArray(batch) || batch.length === 0) break;
+    const body = await res.json();
+
+    // Some hosts (e.g. Imunify360 / WAFs) answer 200 with a JSON error OBJECT
+    // instead of the posts array when they flag the caller as a bot. Detect that
+    // and stop loudly — otherwise the run silently reports 0 jobs and we'd never
+    // know the source was blocked rather than empty.
+    if (!Array.isArray(body)) {
+      const msg =
+        (body && typeof body === "object" && (body as { message?: string }).message) ||
+        "non-array response";
+      console.warn(`  ⚠ ${opts.restBase} page ${page} blocked/!json — ${msg}`);
+      break;
+    }
+
+    const batch = body as WpPost[];
+    if (batch.length === 0) break;
 
     opts.onPage?.(page, totalPages, batch.length);
     for (const post of batch) yield post;

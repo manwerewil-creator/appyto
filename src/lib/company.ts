@@ -15,7 +15,7 @@ export function cleanCompany(name?: string | null): string | null {
   if (!t) return null;
   // Collapse spaces/dots so "apply now", "ApplyNOW.co.zw" all normalise the same.
   const k = t.toLowerCase().replace(/[\s._-]+/g, "");
-  if (/applynow|jobszimbabwe|feasters|appyto/.test(k)) return null;
+  if (/applynow|jobszimbabwe|vacancybox|feasters|appyto/.test(k)) return null;
   if (GENERIC.has(k)) return null;
   // Some posts carry a sentence fragment of the company description instead of a
   // real name (e.g. "was founded in response to the economic challenges..."). A

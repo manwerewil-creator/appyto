@@ -13,6 +13,7 @@ loadEnv(); // populate process.env from .env.local before anything reads it
 import { crawlWp } from "./wp-client.ts";
 import { SOURCES } from "./sources.ts";
 import { mergeJobsJson, writeCsv, pushToSheet, upsertSupabase } from "./store.ts";
+import { dedupeJobs } from "./dedupe.ts";
 import type { NormalizedJob } from "./types.ts";
 
 interface Args { source?: string; pages?: number; }
@@ -55,22 +56,38 @@ async function scrapeSource(sourceId: string, maxPages?: number) {
       `(${jobs.length ? Math.round((withEmail / jobs.length) * 100) : 0}%)`,
   );
 
+  // Per-source CSV snapshot (audit trail of exactly what each board returned).
   const csvPath = await writeCsv(jobs, sourceId);
   console.log(`  ✓ CSV → ${csvPath}`);
-  const total = await mergeJobsJson(jobs);
-  console.log(`  ✓ data/jobs.json now holds ${total} jobs`);
-  const up = await upsertSupabase(jobs);
-  if (up) console.log(`  ✓ upserted ${up} jobs into Supabase`);
-  await pushToSheet(jobs);
-  return jobs.length;
+  return jobs;
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const sources = args.source ? [args.source] : Object.keys(SOURCES);
-  let total = 0;
-  for (const s of sources) total += await scrapeSource(s, args.pages);
-  console.log(`\n■ Done. Scraped ${total} jobs across ${sources.length} source(s).`);
+
+  // 1. Scrape every source into one pool.
+  const all: NormalizedJob[] = [];
+  for (const s of sources) all.push(...(await scrapeSource(s, args.pages)));
+
+  // 2. Collapse cross-source duplicates — one canonical record per real job, so
+  //    a vacancy re-posted on two boards lands in the catalogue exactly once.
+  const { kept, dropped, merged } = dedupeJobs(all);
+  console.log(
+    `\n▶ De-duplicated: ${all.length} scraped → ${kept.length} unique ` +
+      `(${dropped} duplicate${dropped === 1 ? "" : "s"} across ${merged} job${merged === 1 ? "" : "s"} dropped)`,
+  );
+
+  // 3. Persist the deduplicated catalogue once.
+  const total = await mergeJobsJson(kept);
+  console.log(`  ✓ data/jobs.json now holds ${total} jobs`);
+  const up = await upsertSupabase(kept);
+  if (up) console.log(`  ✓ upserted ${up} jobs into Supabase`);
+  await pushToSheet(kept);
+
+  console.log(
+    `\n■ Done. ${kept.length} unique jobs across ${sources.length} source(s).`,
+  );
 }
 
 main().catch((err) => { console.error("\nFATAL:", err); process.exit(1); });

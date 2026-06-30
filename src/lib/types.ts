@@ -2,7 +2,7 @@
 
 export interface Job {
   id: string;                 // `${source}:${source_uid}`
-  source: "jobszimbabwe" | "applynow" | "custom";
+  source: "jobszimbabwe" | "applynow" | "vacancybox" | "custom";
   source_uid: string;
   url: string;
   title: string;

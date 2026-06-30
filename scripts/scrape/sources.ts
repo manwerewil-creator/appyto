@@ -160,4 +160,52 @@ const applynow: SourceConfig = {
   },
 };
 
-export const SOURCES: Record<string, SourceConfig> = { jobszimbabwe, applynow };
+// ─── vacancybox ──────────────────────────────────────────────────────────────
+// "WP Job Manager" CPT `job_listing` (rest_base `job-listings`). Taxonomies:
+//   job_listing_category, job_listing_type, job_listing_region.
+// The employer contact lives in the post body (≈85% expose an apply email).
+// Cloudflare-fronted and uncached → pages are slow (~30s); the crawler's retry
+// and politeness delay already absorb that.
+const vacancybox: SourceConfig = {
+  id: "vacancybox",
+  baseUrl: "https://vacancybox.co.zw",
+  restBase: "job-listings",
+  normalize(post) {
+    const html = post.content?.rendered ?? "";
+    const text = htmlToText(html);
+    const t = termsByTaxonomy(post);
+    const title = decodeEntities(post.title?.rendered ?? "").trim();
+
+    const email = extractEmail(html, text);
+    const applyUrl = extractApplyUrl(html, post.link);
+
+    return {
+      source: "vacancybox",
+      source_uid: String(post.id),
+      url: post.link,
+      title,
+      // No company taxonomy here, and the body has no reliable "Company:" line —
+      // companyFromBody() tends to grab a description fragment. Use only the safe
+      // title-tail guess ("… – Acme Ltd"); otherwise leave it null (UI shows a
+      // monogram). The app's cleanCompany() is the final guard at render time.
+      company: guessCompanyFromTitle(title),
+      location: t.job_listing_region?.[0] ?? null,
+      category: t.job_listing_category?.[0] ?? null,
+      job_type: t.job_listing_type?.[0] ?? null,
+      tags: t.job_listing_category ?? [],
+      description: text,
+      description_html: html,
+      apply_email: email,
+      apply_url: applyUrl,
+      apply_method: classifyApply(email, applyUrl, text),
+      salary: extractSalary(text),
+      posted_at: isoOrNull(post.date_gmt),
+      closes_at: null, // deadline only in free text
+      is_open: post.status === "publish",
+      logo_url: logoFromEmail(email),
+      raw: post,
+    };
+  },
+};
+
+export const SOURCES: Record<string, SourceConfig> = { jobszimbabwe, applynow, vacancybox };

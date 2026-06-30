@@ -4,7 +4,7 @@
 export type ApplyMethod = "email" | "url" | "instructions" | "unknown";
 
 export interface NormalizedJob {
-  source: "jobszimbabwe" | "applynow";
+  source: "jobszimbabwe" | "applynow" | "vacancybox";
   source_uid: string;
   url: string;
   title: string;
