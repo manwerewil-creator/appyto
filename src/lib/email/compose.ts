@@ -6,9 +6,22 @@
 // emails, with the requirement-driven lines adapting to each posting.
 
 import type { Job } from "../types";
+import { cleanCompany } from "../company";
 import { hashSeed, mulberry32, spin, pick, type RNG } from "./spintax";
 import { TONES, REQUIREMENT_LINES, type Tone } from "./corpus";
 import { detectRequirements, type Requirements } from "./detect";
+
+/** "a" / "an" for the following word (simple vowel heuristic — fine for job titles). */
+function aOrAn(word: string): string {
+  return /^[aeiou]/i.test(word.trim()) ? "an" : "a";
+}
+
+/** Tidy a scraped job title: drop "| Apply by …" tails and trailing deadline notes. */
+function cleanTitle(raw?: string | null): string {
+  let t = (raw ?? "").split("|")[0].trim();
+  t = t.replace(/\s*[–—-]\s*(apply|deadline|closing|ref\.?|vacancy)\b.*$/i, "").trim();
+  return t.replace(/\s+/g, " ") || "the role";
+}
 
 export interface ComposeProfile {
   full_name?: string | null;
@@ -80,10 +93,10 @@ function personaTemplate(profile: ComposeProfile): string {
   const skillPhrase = skillCount === 2 ? "[skillA] and [skillB]" : skillCount === 1 ? "[skillA]" : "";
 
   if (hasHeadline && skillPhrase) {
-    return `{As a [headline],|With my background as a [headline],|Coming in as a [headline],} I bring {hands-on|strong|practical|solid} ${skillPhrase} to {this role|the role|your team}.`;
+    return `{As [aHeadline],|With my background as [aHeadline],|Coming in as [aHeadline],} I bring {hands-on|strong|practical|solid} ${skillPhrase} to {this role|the role|your team}.`;
   }
   if (hasHeadline) {
-    return `{As a [headline], I know what a role like this needs.|My experience as a [headline] lines up closely with what you are looking for.|I have built my career as a [headline], and this role fits where I want to go next.}`;
+    return `{As [aHeadline], I know what a role like this needs.|My experience as [aHeadline] lines up closely with what you are looking for.|I have built my career as [aHeadline], and this role fits where I want to go next.}`;
   }
   if (skillPhrase) {
     return `I bring {hands-on|strong|practical|solid} ${skillPhrase}, which is {exactly what this role calls for|a close match for what you described|directly relevant here}.`;
@@ -109,14 +122,18 @@ export function composeApplicationEmail(
 
   const name = profile.full_name?.trim() || "Applicant";
   const skills = (profile.skills ?? []).map((s) => (s ?? "").trim()).filter(Boolean).slice(0, 2);
+  const headlineVal = (profile.headline ?? "").trim();
   const vars: Record<string, string> = {
     name,
-    title: job.title || "the role",
-    company: job.company || "your team",
+    title: cleanTitle(job.title),
+    // Never inject a garbage "company" (some posts carry a description fragment);
+    // fall back to a neutral phrase that reads correctly in every slot.
+    company: cleanCompany(job.company) || "your company",
     phone: profile.phone || "",
     email: profile.email || "",
     ref: requirements.referenceCode || "",
-    headline: (profile.headline ?? "").trim(),
+    headline: headlineVal,
+    aHeadline: headlineVal ? `${aOrAn(headlineVal)} ${headlineVal}` : "",
     skillA: skills[0] ?? "",
     skillB: skills[1] ?? "",
   };

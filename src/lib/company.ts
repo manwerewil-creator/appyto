@@ -11,11 +11,17 @@ const GENERIC = new Set([
 
 export function cleanCompany(name?: string | null): string | null {
   if (!name) return null;
-  const t = name.trim();
+  const t = name.trim().replace(/\s+/g, " ");
   if (!t) return null;
   // Collapse spaces/dots so "apply now", "ApplyNOW.co.zw" all normalise the same.
   const k = t.toLowerCase().replace(/[\s._-]+/g, "");
   if (/applynow|jobszimbabwe|feasters|appyto/.test(k)) return null;
   if (GENERIC.has(k)) return null;
+  // Some posts carry a sentence fragment of the company description instead of a
+  // real name (e.g. "was founded in response to the economic challenges..."). A
+  // genuine employer name is short and has no sentence punctuation or verbs.
+  if (t.length > 50 || t.split(" ").length > 6) return null;
+  if (/[.!?]/.test(t)) return null;
+  if (/\b(was|were|is|are|be|been|founded|established|provides?|offers?|aims?|seeks?|committed|response|economic|challenges?)\b/i.test(t)) return null;
   return t;
 }

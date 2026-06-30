@@ -70,15 +70,30 @@ export default function ComposeModal({
 
   const send = async () => {
     setSending(true); setError(null);
-    const r = await fetch("/api/apply", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_id: job.id, custom_subject: subject, custom_body: body }),
-    });
-    const d = await r.json();
-    setSending(false);
-    if (d.ok) onSent();
-    else if (d.upgrade) setUpgrade(d.reason ?? "You've used your free applications.");
-    else setError(d.reason ?? "Could not send.");
+    // Always release the spinner, and never wait forever — a slow send or a
+    // non-JSON error (e.g. a function timeout) must surface, not hang.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 45000);
+    try {
+      const r = await fetch("/api/apply", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: job.id, custom_subject: subject, custom_body: body }),
+        signal: ctrl.signal,
+      });
+      const d = await r.json().catch(() => ({ ok: false, reason: `Send failed (${r.status}). Please try again.` }));
+      if (d.ok) onSent();
+      else if (d.upgrade) setUpgrade(d.reason ?? "You've used your free applications.");
+      else setError(d.reason ?? "Could not send.");
+    } catch (e) {
+      setError(
+        (e as Error)?.name === "AbortError"
+          ? "Sending took too long. Please check your connection and try again."
+          : "Could not send. Please check your connection and try again.",
+      );
+    } finally {
+      clearTimeout(timer);
+      setSending(false);
+    }
   };
 
   const paragraphs = body.split(/\n{2,}/).filter((p) => p.trim());

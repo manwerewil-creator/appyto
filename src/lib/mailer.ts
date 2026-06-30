@@ -142,6 +142,7 @@ export async function sendApplication({ config, job, profile, cv, attachments, o
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({ raw: raw.toString("base64url") }),
+    signal: AbortSignal.timeout(20_000),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");

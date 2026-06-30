@@ -73,6 +73,7 @@ export async function accessTokenFromRefresh(refreshToken: string): Promise<stri
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
+    signal: AbortSignal.timeout(12_000),
   });
   const json = (await res.json()) as { access_token?: string; error?: string; error_description?: string };
   if (!res.ok || !json.access_token) {
