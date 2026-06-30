@@ -97,8 +97,15 @@ export interface AutoApplyResult {
   attempted: number; sent: number; skipped: number; failed: number; remainingToday: number;
 }
 
-export async function autoApply(sb: SupabaseClient, userId: string, max?: number): Promise<AutoApplyResult> {
-  const [jobs, profile] = await Promise.all([fetchJobs(sb), fetchProfile(sb, userId)]);
+export async function autoApply(
+  sb: SupabaseClient, userId: string, max?: number, jobsCache?: import("./types").Job[],
+): Promise<AutoApplyResult> {
+  // The daily cron passes a shared jobsCache so the 5k-row catalogue is fetched
+  // ONCE for the whole run instead of re-fetched per user.
+  const [jobs, profile] = await Promise.all([
+    jobsCache ? Promise.resolve(jobsCache) : fetchJobs(sb),
+    fetchProfile(sb, userId),
+  ]);
   const cap = effectiveCap(profile);
   const already = await appliedToday(sb, userId);
   const budget = Math.min(Math.max(0, cap - already), max ?? cap);

@@ -7,9 +7,12 @@ import type { Job, JobPreferences } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+export const maxDuration = 300; // honored on Vercel Pro; Hobby hard-caps at 60s.
 
 const APP = process.env.APP_URL || "https://www.feasters.cloud";
+// Bow out before the Hobby 60s ceiling. Users not reached keep their watermark,
+// so they're simply picked up on the next run — nothing is lost.
+const BUDGET_MS = Number(process.env.CRON_NOTIFY_BUDGET_MS ?? 52_000);
 
 function prefsOf(p: ProfileRow): JobPreferences {
   return {
@@ -36,15 +39,19 @@ export async function GET(req: NextRequest) {
 
   const admin = supabaseAdmin();
   const now = new Date().toISOString();
+  const startedAt = Date.now();
 
   // Only users who actually have a push subscription are worth processing.
   const { data: subRows } = await admin.from("push_subscriptions").select("user_id");
   const userIds = [...new Set((subRows ?? []).map((r) => r.user_id as string))];
 
   let notified = 0;
+  let stoppedEarly = false;
   const results: { user: string; newJobs: number; delivered: number }[] = [];
 
   for (const userId of userIds) {
+    if (Date.now() - startedAt > BUDGET_MS) { stoppedEarly = true; break; }
+    try {
     const { data: profile } = await admin
       .from("profiles").select("*").eq("id", userId).maybeSingle();
     if (!profile || !profile.onboarded) continue;
@@ -88,7 +95,11 @@ export async function GET(req: NextRequest) {
     }
 
     await admin.from("profiles").update({ jobs_notified_at: now }).eq("id", userId);
+    } catch (err) {
+      // Isolate per-user failures so one bad row can't abort the whole run.
+      results.push({ user: userId, newJobs: 0, delivered: 0, error: String((err as Error)?.message ?? err) } as never);
+    }
   }
 
-  return NextResponse.json({ ok: true, usersChecked: userIds.length, notified, results });
+  return NextResponse.json({ ok: true, usersChecked: userIds.length, notified, stoppedEarly, results });
 }

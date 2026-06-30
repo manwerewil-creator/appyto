@@ -21,6 +21,60 @@ export async function fetchJobs(sb: SB, limit = 5000): Promise<Job[]> {
     .order("posted_at", { ascending: false }).limit(limit);
   return ((data ?? []) as Job[]).map(scrub);
 }
+export interface JobsQuery {
+  search?: string; category?: string; location?: string; type?: string;
+  onlyEmail?: boolean; page?: number; pageSize?: number;
+}
+export interface JobsPage { total: number; filtered: number; page: number; pageSize: number; items: Job[]; }
+
+// Server-side filtered + paginated jobs. Filters and paging run in Postgres
+// (using the jobs_open/cat/loc/posted indexes) so each request transfers only one
+// page — not the whole 5k-row catalogue. This is the scalable path for the board.
+export async function fetchJobsPage(sb: SB, qy: JobsQuery): Promise<JobsPage> {
+  const page = Math.max(1, qy.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, qy.pageSize ?? 25));
+  const start = (page - 1) * pageSize;
+
+  // Total open jobs (unfiltered) — cheap head count, no rows transferred.
+  const { count: total } = await sb.from("jobs")
+    .select("id", { count: "exact", head: true }).eq("is_open", true);
+
+  let q = sb.from("jobs").select("*", { count: "exact" }).eq("is_open", true);
+  if (qy.category) q = q.eq("category", qy.category);
+  if (qy.location) q = q.eq("location", qy.location);
+  if (qy.type) q = q.eq("job_type", qy.type);
+  if (qy.onlyEmail) q = q.not("apply_email", "is", null);
+  if (qy.search) {
+    // Strip PostgREST `or()` delimiters so the term can't break the filter syntax.
+    const s = qy.search.replace(/[%,()]/g, " ").trim();
+    if (s) q = q.or(`title.ilike.%${s}%,company.ilike.%${s}%`);
+  }
+  q = q.order("posted_at", { ascending: false }).range(start, start + pageSize - 1);
+
+  const { data, count: filtered } = await q;
+  return {
+    total: total ?? 0,
+    filtered: filtered ?? 0,
+    page, pageSize,
+    items: ((data ?? []) as Job[]).map(scrub),
+  };
+}
+
+// Lightweight distinct-value counts for the filter dropdowns. Selects only the
+// three facet columns (never the bulky description), so it's far cheaper than a
+// full fetchJobs() scan.
+export async function fetchJobFacets(sb: SB) {
+  const { data } = await sb.from("jobs")
+    .select("category, location, job_type").eq("is_open", true).limit(8000);
+  const rows = (data ?? []) as { category: string | null; location: string | null; job_type: string | null }[];
+  const count = (key: "category" | "location" | "job_type") => {
+    const m = new Map<string, number>();
+    for (const r of rows) { const v = r[key]; if (v) m.set(v, (m.get(v) ?? 0) + 1); }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([value, n]) => ({ value, n }));
+  };
+  return { categories: count("category"), locations: count("location"), types: count("job_type"), totalOpen: rows.length };
+}
+
 export async function fetchJobById(sb: SB, id: string): Promise<Job | null> {
   const { data } = await sb.from("jobs").select("*").eq("id", id).maybeSingle();
   return data ? scrub(data as Job) : null;
