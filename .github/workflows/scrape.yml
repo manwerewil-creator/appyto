@@ -15,7 +15,10 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # Persistence happens once, AFTER all sources are scraped + de-duplicated, so a
+    # mid-crawl timeout would discard the whole run. VacancyBox is Cloudflare-fronted
+    # and slow (~30-50s/page, ~94 pages); give the full multi-source crawl headroom.
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
