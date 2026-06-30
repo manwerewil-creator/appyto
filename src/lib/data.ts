@@ -88,7 +88,11 @@ export async function sentApplicationsCount(sb: SB, userId: string): Promise<num
   return count ?? 0;
 }
 export async function addApplication(sb: SB, row: Record<string, unknown>) {
-  const { data, error } = await sb.from("applications").insert(row).select().maybeSingle();
+  // Upsert on (user_id, job_id): retrying a job whose previous attempt FAILED must
+  // reuse that row, not collide with the UNIQUE(user_id, job_id) constraint (500).
+  const { data, error } = await sb.from("applications")
+    .upsert(row, { onConflict: "user_id,job_id" })
+    .select().maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }

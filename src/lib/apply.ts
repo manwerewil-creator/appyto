@@ -73,7 +73,7 @@ export async function applyToJob(
 
   const rec = await addApplication(sb, {
     user_id: userId, job_id: job.id, job_title: job.title, company: job.company,
-    to_email: job.apply_email, status: "queued",
+    to_email: job.apply_email, status: "queued", error: null,
   }) as { id: string };
 
   try {

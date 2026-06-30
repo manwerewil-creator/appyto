@@ -16,6 +16,12 @@ export async function POST(req: NextRequest) {
 
   const override =
     custom_subject || custom_body ? { subject: custom_subject, body: custom_body } : undefined;
-  const r = await applyToJob(sb, user.id, job_id, override);
-  return NextResponse.json(r, { status: r.ok ? 200 : 400 });
+  try {
+    const r = await applyToJob(sb, user.id, job_id, override);
+    return NextResponse.json(r, { status: r.ok ? 200 : 400 });
+  } catch (e: unknown) {
+    // Surface the real reason to the client instead of an opaque 500.
+    const reason = (e instanceof Error ? e.message : String(e)).slice(0, 300);
+    return NextResponse.json({ ok: false, status: "failed", reason }, { status: 500 });
+  }
 }
