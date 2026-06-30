@@ -59,6 +59,29 @@ export async function exchangeCode(code: string, origin: string): Promise<TokenR
   return (await res.json()) as TokenResponse;
 }
 
+/** Exchange the stored refresh token for a fresh short-lived access token.
+ *  Used to call the Gmail API (sending via gmail.send — SMTP would need the
+ *  broader mail.google.com scope, which we deliberately avoid). */
+export async function accessTokenFromRefresh(refreshToken: string): Promise<string> {
+  const body = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID!,
+    client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+    refresh_token: refreshToken,
+    grant_type: "refresh_token",
+  });
+  const res = await fetch(TOKEN_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const json = (await res.json()) as { access_token?: string; error?: string; error_description?: string };
+  if (!res.ok || !json.access_token) {
+    // invalid_grant = the user revoked access or the token aged out → reconnect.
+    throw new Error(json.error_description || json.error || "Could not refresh Google access token");
+  }
+  return json.access_token;
+}
+
 /** Pull the verified email address out of the id_token (a JWT). */
 export function emailFromIdToken(idToken?: string): string | null {
   if (!idToken) return null;

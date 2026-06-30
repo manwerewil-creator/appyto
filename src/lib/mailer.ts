@@ -1,12 +1,15 @@
 // Email sending for either method: the user's Gmail via OAuth2 (token) or SMTP
 // app password. Credentials come from the `send_credentials` row, decrypted.
 
-import nodemailer from "nodemailer";
+import MailComposer from "nodemailer/lib/mail-composer";
 import type { Job, ResourceLink, ResourceFile } from "./types";
 import type { CredsRow } from "./data";
 import type { Resume } from "./resume";
 import { decrypt } from "./crypto";
+import { accessTokenFromRefresh } from "./google";
 import { composeApplicationEmail } from "./email";
+
+const GMAIL_SEND_ENDPOINT = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 
 export interface SendConfig {
   fromEmail: string;
@@ -59,17 +62,16 @@ export function emailReady(c: CredsRow | null): boolean {
   return !!c?.google_refresh_enc;
 }
 
-// Sending is always the user's own Gmail over OAuth2 — nodemailer refreshes the
-// short-lived access token from the stored refresh token on each send.
-export function makeTransport(c: SendConfig) {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      type: "OAuth2", user: c.fromEmail,
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      refreshToken: c.googleRefresh,
-    },
+// Build a raw RFC822 MIME message (handles encoding, headers, attachments).
+function buildRawMime(opts: {
+  from: string; replyTo?: string; to: string; subject: string; text: string;
+  attachments: { filename: string; content: Buffer }[];
+}): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    new MailComposer(opts).compile().build((err: Error | null, message: Buffer) => {
+      if (err) reject(err);
+      else resolve(message);
+    });
   });
 }
 
@@ -114,6 +116,8 @@ export interface SendArgs {
 
 export async function sendApplication({ config, job, profile, cv, attachments, override }: SendArgs) {
   if (!job.apply_email) throw new Error("job has no apply email");
+  if (!config.googleRefresh) throw new Error("Gmail isn't connected. Please connect it in Settings.");
+
   const built = buildEmail(job, profile);
   const subject = override?.subject?.trim() || built.subject;
   // Always append the user's extra links (portfolio, LinkedIn, …) to the body.
@@ -122,12 +126,26 @@ export async function sendApplication({ config, job, profile, cv, attachments, o
     ...(cv ? [cv] : []),
     ...(attachments ?? []),
   ];
-  await makeTransport(config).sendMail({
+
+  const raw = await buildRawMime({
     from: profile.full_name ? `${profile.full_name} <${config.fromEmail}>` : config.fromEmail,
     replyTo: profile.email || undefined,
     to: job.apply_email,
     subject, text: body,
     attachments: files.map((f) => ({ filename: f.filename, content: f.content })),
   });
+
+  // Send through the Gmail API. The gmail.send scope works here (SMTP would
+  // require the broader, restricted mail.google.com scope, which we avoid).
+  const accessToken = await accessTokenFromRefresh(config.googleRefresh);
+  const res = await fetch(GMAIL_SEND_ENDPOINT, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ raw: raw.toString("base64url") }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Gmail send failed (${res.status}): ${detail.slice(0, 300)}`);
+  }
   return { subject, to: job.apply_email };
 }
