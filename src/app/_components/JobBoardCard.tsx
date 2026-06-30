@@ -122,6 +122,10 @@ export default function JobBoardCard({ job, index = 0, onApply, onPass, applying
             </p>
           </div>
         )}
+
+        <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+          Brought to you by Feasters
+        </p>
       </div>
 
       {/* Actions */}

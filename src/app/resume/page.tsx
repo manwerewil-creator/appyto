@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import ResumeSheet from "./Templates";
+import UpgradeGate from "../_components/UpgradeGate";
 import { TEMPLATES, SAMPLE_RESUME, DEFAULT_RESUME, type Resume, type Experience, type Education, type Skill } from "@/lib/resume";
 import b from "./builder.module.css";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ const selectClass =
 
 export default function ResumeBuilder() {
   const [r, setR] = useState<Resume | null>(null);
+  const [paid, setPaid] = useState<boolean | null>(null);   // CV builder is paid-only
   const [step, setStep] = useState(0);
   const [saved, setSaved] = useState(true);
   const [scale, setScale] = useState(0.53);   // A4 preview scale (fluid; set from measured width)
@@ -38,6 +40,7 @@ export default function ResumeBuilder() {
   const builderRoRef = useRef<ResizeObserver>();
 
   useEffect(() => { fetch("/api/resume").then((x) => x.json()).then(setR).catch(() => setR(DEFAULT_RESUME)); }, []);
+  useEffect(() => { fetch("/api/quota").then((x) => x.json()).then((q) => setPaid(!!q.isPaid)).catch(() => setPaid(false)); }, []);
 
   // Measure the preview frame and scale the 793.7px (210mm) A4 sheet to fit it
   // exactly — so the preview adapts to any column/screen width with no overflow.
@@ -82,7 +85,15 @@ export default function ResumeBuilder() {
     return () => clearTimeout(t.current);
   }, [r]);
 
-  if (!r) return (
+  if (paid === false) return (
+    <UpgradeGate
+      title="The CV builder is a paid feature"
+      description="Build a professional, employer-ready CV — included on any paid plan."
+      bullets={["4 ATS-friendly templates", "Live A4 preview + one-tap PDF", "Auto-fills from your profile"]}
+      cta="Unlock the CV builder"
+    />
+  );
+  if (!r || paid === null) return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div>
         <p className="text-sm text-muted-foreground">Loading…</p>

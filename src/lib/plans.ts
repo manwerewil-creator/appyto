@@ -18,22 +18,35 @@ export const FREE_SEND_LIMIT = 5;
 
 export const PLANS: Record<PlanId, Plan> = {
   free:      { id: "free", name: "Free", priceUsd: 0, dailyApplyCap: 0, isPaid: false, lifetimeSendLimit: FREE_SEND_LIMIT,
-               blurb: "Send 5 applications free, then upgrade.", features: ["5 free applications", "Browse all jobs", "CV builder"] },
+               blurb: "Try it free — 5 applications on us.",
+               features: ["Browse every job in Zimbabwe", "5 free applications", "Apply from your own Gmail"] },
   free_plus: { id: "free_plus", name: "Free+", priceUsd: 0, dailyApplyCap: 5, isPaid: false,
-               blurb: "Unlock auto-apply with your own Gemini key.", features: ["Everything in Free", "Auto-apply 5/day", "Smarter matching"] },
+               blurb: "Auto-apply free with your own AI key.",
+               features: ["Everything in Free", "Auto-apply up to 5/day (your AI key)"] },
   base:      { id: "base", name: "Base", priceUsd: 17, dailyApplyCap: 15, isPaid: true,
-               blurb: "For students serious about interviews.", features: ["Auto-apply 15/day", "Priority matching", "Application tracking"] },
+               blurb: "Start landing interviews.",
+               features: ["Smart job matching", "Pro CV builder · 4 templates", "Auto-apply up to 15/day", "Unlimited applications", "Application tracking"] },
   pro:       { id: "pro", name: "Pro", priceUsd: 25, dailyApplyCap: 50, isPaid: true,
-               blurb: "Maximise your reach.", features: ["Auto-apply 50/day", "Priority queue", "Custom email templates"] },
+               blurb: "Maximise your reach — internships included.",
+               features: ["Everything in Base", "Attachment & internship jobs", "Auto-apply up to 50/day", "Priority send queue", "Custom email templates"] },
   premium:   { id: "premium", name: "Premium", priceUsd: 60, dailyApplyCap: 150, isPaid: true,
-               blurb: "Blanket the market.", features: ["Auto-apply 150/day", "Top priority", "Concierge onboarding"] },
+               blurb: "Blanket the market.",
+               features: ["Everything in Pro", "Auto-apply up to 150/day", "Top priority queue", "Early access to new jobs", "Concierge onboarding"] },
 };
 
 export const PLAN_LIST = Object.values(PLANS).sort((a, b) => a.priceUsd - b.priceUsd);
 export const PAID_PLANS = PLAN_LIST.filter((p) => p.isPaid);
 
-// The Internships section is an upgrade feature — Pro and Premium unlock it.
-// (Single source of truth: change this list to widen/narrow access.)
+/** Any paid tier (Base and up). */
+export const isPaidPlan = (planId?: string | null): boolean =>
+  !!PLANS[(planId as PlanId) ?? "free"]?.isPaid;
+
+// The CV builder and job matching require a paid plan (Base and up).
+export const canBuildCv = (planId?: string | null): boolean => isPaidPlan(planId);
+export const canGetMatched = (planId?: string | null): boolean => isPaidPlan(planId);
+
+// The attachment / internship section is a higher-tier upgrade — Pro and Premium
+// unlock it. (Single source of truth: change this list to widen/narrow access.)
 export const INTERNSHIP_PLANS: PlanId[] = ["pro", "premium"];
 export const canAccessInternships = (planId?: string | null): boolean =>
   !!planId && (INTERNSHIP_PLANS as string[]).includes(planId);

@@ -59,6 +59,9 @@ export default function JobCard({ job, onApply, onCustomize, applying }: JobCard
             {job.description.slice(0, 240)}…
           </p>
         )}
+        <p className="pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+          Brought to you by Feasters
+        </p>
       </div>
 
       {/* ── Vertical divider ── */}

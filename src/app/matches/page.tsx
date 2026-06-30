@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import JobCard from "../_components/JobCard";
 import ComposeModal from "../_components/ComposeModal";
 import QuotaBanner from "../_components/QuotaBanner";
+import UpgradeGate from "../_components/UpgradeGate";
 import { useApplyFlow } from "../_components/useApplyFlow";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,18 @@ export default function MatchesPage() {
     toast.success("Auto-apply complete", { description: `Sent ${d.sent} · skipped ${d.skipped} · failed ${d.failed}` });
     load();
   };
+
+  // Matching is a paid feature (Base and up).
+  if (quota && !quota.isPaid) return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <UpgradeGate
+        title="Job matching is a paid feature"
+        description="We score every job in Zimbabwe against your profile and surface your strongest matches — on any paid plan."
+        bullets={["Smart match scoring on every job", "Auto-apply to your matches", "Application tracking"]}
+        cta="Unlock matching"
+      />
+    </div>
+  );
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
