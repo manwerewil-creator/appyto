@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { usePwaInstall } from "../_components/usePwaInstall";
-import { Download, Share, SquarePlus, Check, Briefcase, Send } from "lucide-react";
+import {
+  Download, Share, SquarePlus, Check, Briefcase, Send, Menu, Bell, Settings,
+  MapPin, CalendarDays, FileText, X, Heart, Home, Sparkles, ClipboardCheck, Wifi,
+} from "lucide-react";
 
 /**
  * First-touch landing at feasters.cloud. Feasters is a PWA — this page sells the
@@ -161,39 +164,207 @@ function IosStep({ n, icon, children }: { n: number; icon: React.ReactNode; chil
   );
 }
 
-// A lightweight, stylised phone showing a mini Feasters UI — conveys "this is an
-// app you install", without needing real screenshots.
+// Real iPhone frame (Dynamic Island, side buttons, home indicator) rendered in
+// true 3D via CSS perspective + framer-motion springs: a slow idle float/sway
+// plus a pointer-tracked tilt on devices with a mouse (no-op on touch/mobile,
+// and fully still under prefers-reduced-motion). Screen content mirrors the
+// real app 1:1 — same tokens as app-shell.tsx (brown #7c4a21 section title,
+// JobBoardCard.tsx layout/colors, BottomNav icons/order) — not a generic mock.
 function PhoneMockup() {
+  const reduce = useReducedMotion();
+  const frameRef = useRef<HTMLDivElement>(null);
+
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const spring = { stiffness: 140, damping: 16, mass: 0.6 };
+  const rotateY = useSpring(useTransform(mx, [-0.5, 0.5], [-16, 16]), spring);
+  const rotateX = useSpring(useTransform(my, [-0.5, 0.5], [12, -12]), spring);
+  const glowX = useTransform(mx, [-0.5, 0.5], [0, 100]);
+  const glowY = useTransform(my, [-0.5, 0.5], [0, 100]);
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (reduce || e.pointerType !== "mouse" || !frameRef.current) return;
+    const r = frameRef.current.getBoundingClientRect();
+    mx.set((e.clientX - r.left) / r.width - 0.5);
+    my.set((e.clientY - r.top) / r.height - 0.5);
+  };
+  const onPointerLeave = () => { mx.set(0); my.set(0); };
+
   return (
-    <div className="mx-auto w-[230px] rounded-[2.2rem] border-[7px] border-foreground/90 bg-foreground/90 shadow-2xl">
-      <div className="overflow-hidden rounded-[1.7rem] bg-background">
-        {/* status bar / app header */}
-        <div className="flex items-center justify-between bg-[#159e8c] px-4 py-2.5 text-white">
-          <span className="text-[11px] font-bold tracking-tight">Feasters</span>
-          <Briefcase className="h-3.5 w-3.5" />
-        </div>
-        {/* fake job cards */}
-        <div className="space-y-2.5 p-3">
-          {[
-            { t: "Accountant", c: "Harare", a: "#0ea5e9" },
-            { t: "Sales Rep", c: "Bulawayo", a: "#8b5cf6" },
-            { t: "IT Support", c: "Remote", a: "#f43f5e" },
-          ].map((j) => (
-            <div key={j.t} className="flex items-center gap-2.5 rounded-xl border bg-card p-2.5 text-left">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[10px] font-bold text-white" style={{ background: j.a }}>
-                {j.t[0]}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] font-semibold leading-tight">{j.t}</p>
-                <p className="truncate text-[9px] text-muted-foreground">{j.c}</p>
+    <div style={{ perspective: 1400 }} className="mx-auto w-[248px]">
+      {/* idle float — separate layer from pointer-tilt so they compose cleanly */}
+      <motion.div
+        animate={reduce ? undefined : { y: [0, -7, 0], rotateZ: [0, 0.9, 0, -0.9, 0] }}
+        transition={reduce ? undefined : { duration: 7, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <motion.div
+          ref={frameRef}
+          onPointerMove={onPointerMove}
+          onPointerLeave={onPointerLeave}
+          style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+          className="relative"
+        >
+          {/* drop shadow that reads as "lifted off the page" */}
+          <div className="absolute -inset-x-6 -bottom-6 top-10 -z-10 rounded-[3rem] bg-black/25 blur-2xl" style={{ transform: "translateZ(-40px)" }} />
+
+          {/* titanium frame */}
+          <div className="relative rounded-[2.7rem] bg-gradient-to-br from-neutral-700 via-neutral-900 to-black p-[3px] shadow-[0_2px_0_rgba(255,255,255,0.15)_inset]">
+            <div className="rounded-[2.55rem] bg-black p-[9px]">
+              {/* side buttons (cosmetic, on the outer frame) */}
+              <span className="absolute -left-[2px] top-[92px] h-6 w-[3px] rounded-l-sm bg-neutral-800" />
+              <span className="absolute -left-[2px] top-[124px] h-10 w-[3px] rounded-l-sm bg-neutral-800" />
+              <span className="absolute -left-[2px] top-[168px] h-10 w-[3px] rounded-l-sm bg-neutral-800" />
+              <span className="absolute -right-[2px] top-[128px] h-14 w-[3px] rounded-r-sm bg-neutral-800" />
+
+              {/* screen */}
+              <div className="relative overflow-hidden rounded-[2rem] bg-white">
+                {/* Dynamic Island */}
+                <div className="absolute left-1/2 top-[8px] z-30 h-[16px] w-[64px] -translate-x-1/2 rounded-full bg-black" />
+
+                {/* status bar */}
+                <div className="relative z-20 flex items-center justify-between px-4 pb-1 pt-[10px] text-[9px] font-semibold text-foreground">
+                  <span>11:27</span>
+                  <div className="flex items-center gap-1">
+                    <span className="flex items-end gap-[1.5px]">
+                      {[3, 5, 7, 9].map((h) => (
+                        <span key={h} className="w-[2.5px] rounded-[1px] bg-foreground" style={{ height: h }} />
+                      ))}
+                    </span>
+                    <Wifi className="h-[10px] w-[10px]" strokeWidth={2.5} />
+                    <span className="rounded-[3px] border border-foreground/70 px-[3px] text-[7px] leading-[10px]">100</span>
+                  </div>
+                </div>
+
+                {/* app top panel — mirrors app-shell.tsx header */}
+                <div className="flex items-center gap-2 border-b border-border/70 px-3 py-2">
+                  <Menu className="h-3.5 w-3.5 text-foreground/70" strokeWidth={1.75} />
+                  <span className="text-[10.5px] font-bold tracking-tight text-[#7c4a21]">All Jobs</span>
+                  <span className="ml-auto flex items-center gap-1.5">
+                    <Bell className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
+                    <Settings className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
+                    <span className="h-5 w-5 rounded-full bg-gradient-to-br from-[hsl(221,83%,60%)] to-[hsl(262,83%,58%)] ring-1 ring-border" />
+                  </span>
+                </div>
+
+                {/* job feed */}
+                <div className="relative h-[300px] overflow-hidden bg-muted/20">
+                  <div className="space-y-2 p-2">
+                    <MockJobCard
+                      logo="W" logoClass="bg-indigo-600"
+                      title="WWF Africa Hiring Remote Consultants t…"
+                      salary="$300"
+                      location="Remote" posted="Posted today"
+                      pills={["Contract", "Remote", "Global", "Remote"]}
+                      desc="WWF Africa Consultancy Opportunity 2026: Remote Stakeholder Mapping and Climate & Biodiversity Networks Consultant…"
+                    />
+                    <MockJobCard
+                      logo="C" logoClass="bg-rose-600"
+                      title="The Chamber of Mines of Zimbabwe: Student Attachme…"
+                      location="Zimbabwe" posted="Posted today"
+                      pills={["Contract", "Zimbabwe", "Onsite", "Zimbabwe"]}
+                      desc="Student Attachment Opportunities at The Chamber of Mines of Zimbabwe — Apply by July 7, 2026…"
+                    />
+                  </div>
+                  {/* fade so the second card reads as "more below", matching the real scroll view */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent" />
+                </div>
+
+                {/* bottom tab bar — mirrors BottomNav in app-shell.tsx */}
+                <div className="flex items-stretch justify-around border-t border-border bg-white py-1.5">
+                  {[
+                    { label: "Home", Icon: Home },
+                    { label: "Jobs", Icon: Briefcase, active: true },
+                    { label: "Matches", Icon: Sparkles },
+                    { label: "Apply", Icon: Send },
+                    { label: "Applied", Icon: ClipboardCheck },
+                  ].map(({ label, Icon, active }) => (
+                    <span key={label} className={`relative flex flex-1 flex-col items-center gap-0.5 text-[5.5px] font-medium ${active ? "text-[hsl(221,83%,53%)]" : "text-muted-foreground"}`}>
+                      {active && <span className="absolute -top-1.5 h-[2px] w-3 rounded-full bg-[hsl(221,83%,53%)]" />}
+                      <Icon className="h-3 w-3" strokeWidth={active ? 2.2 : 1.8} />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+
+                {/* home indicator */}
+                <div className="flex justify-center bg-white pb-[6px] pt-[3px]">
+                  <span className="h-[3px] w-[70px] rounded-full bg-black/80" />
+                </div>
+
+                {/* glossy reflection, tracks the pointer for a real "glass" feel */}
+                <motion.div
+                  className="pointer-events-none absolute inset-0 z-40 opacity-40"
+                  style={{
+                    background: useTransform(
+                      [glowX, glowY],
+                      ([gx, gy]: number[]) => `radial-gradient(220px circle at ${gx}% ${gy}%, rgba(255,255,255,0.5), transparent 60%)`,
+                    ),
+                  }}
+                />
               </div>
-              <span className="rounded-md bg-[#159e8c] px-2 py-1 text-[9px] font-bold text-white">Apply</span>
             </div>
-          ))}
-          <div className="flex items-center justify-center gap-1.5 rounded-xl bg-[#159e8c]/10 py-2 text-[10px] font-semibold text-[#159e8c]">
-            <Send className="h-3 w-3" /> Applied from your Gmail
           </div>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+}
+
+function MockJobCard({
+  logo, logoClass, title, salary, location, posted, pills, desc,
+}: {
+  logo: string; logoClass: string; title: string; salary?: string;
+  location: string; posted: string; pills: string[]; desc: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border/70 bg-card shadow-sm">
+      <div className="p-2">
+        <div className="flex items-start gap-1.5">
+          <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[10px] font-bold text-white ${logoClass}`}>
+            {logo}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 text-[9px] font-bold leading-tight tracking-tight">{title}</p>
+            <p className="truncate text-[7.5px] font-medium text-[hsl(221,83%,53%)]">Confidential company</p>
+          </div>
+          {salary && (
+            <span className="shrink-0 rounded-md bg-emerald-50 px-1.5 py-[1px] text-[8px] font-bold text-emerald-700">{salary}</span>
+          )}
         </div>
+
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[6.5px] text-muted-foreground">
+          <span className="inline-flex items-center gap-0.5"><MapPin className="h-[7px] w-[7px]" />{location}</span>
+          <span className="inline-flex items-center gap-0.5"><CalendarDays className="h-[7px] w-[7px]" />{posted}</span>
+        </div>
+
+        <div className="mt-1 flex flex-wrap gap-1">
+          {pills.map((p, i) => (
+            <span key={`${p}-${i}`} className="inline-flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-[1px] text-[6px] font-semibold text-foreground/80">
+              {i === 0 && <Briefcase className="h-[6px] w-[6px]" />}
+              {p}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-1 rounded-lg border border-border/70 bg-muted/30 p-1.5">
+          <p className="mb-0.5 flex items-center gap-1 text-[6.5px] font-semibold">
+            <FileText className="h-[7px] w-[7px] text-[hsl(221,83%,53%)]" /> About this role
+          </p>
+          <p className="line-clamp-2 text-[6px] leading-relaxed text-muted-foreground">{desc}</p>
+        </div>
+
+        <p className="mt-1 text-[4.5px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+          Brought to you by Feasters
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between gap-1 border-t border-border/70 bg-muted/20 px-2 py-1">
+        <span className="flex flex-1 items-center justify-center gap-0.5 rounded-md border border-input text-[6.5px] font-medium">
+          <X className="h-[7px] w-[7px]" /> Pass
+        </span>
+        <span className="flex flex-1 items-center justify-center gap-0.5 rounded-md bg-[hsl(142,71%,45%)] py-[3px] text-[6.5px] font-bold text-white">
+          <Heart className="h-[7px] w-[7px]" /> Apply Now
+        </span>
       </div>
     </div>
   );
