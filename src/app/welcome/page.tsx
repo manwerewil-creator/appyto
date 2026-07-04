@@ -116,6 +116,12 @@ export default function WelcomePage() {
         <Link href="/login" className="font-semibold text-foreground underline-offset-4 hover:underline">Sign in</Link>
       </p>
 
+      <p className="relative mt-2 text-xs text-muted-foreground">
+        <Link href="/privacy" className="underline-offset-4 hover:underline">Privacy Policy</Link>
+        {" · "}
+        <Link href="/terms" className="underline-offset-4 hover:underline">Terms</Link>
+      </p>
+
       {/* iOS install instructions */}
       <Sheet open={iosOpen} onOpenChange={setIosOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl px-6 pb-8 pt-6">
