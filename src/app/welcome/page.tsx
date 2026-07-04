@@ -164,21 +164,24 @@ function IosStep({ n, icon, children }: { n: number; icon: React.ReactNode; chil
   );
 }
 
-// Real iPhone frame (Dynamic Island, side buttons, home indicator) rendered in
-// true 3D via CSS perspective + framer-motion springs: a slow idle float/sway
-// plus a pointer-tracked tilt on devices with a mouse (no-op on touch/mobile,
-// and fully still under prefers-reduced-motion). Screen content mirrors the
-// real app 1:1 — same tokens as app-shell.tsx (brown #7c4a21 section title,
-// JobBoardCard.tsx layout/colors, BottomNav icons/order) — not a generic mock.
+// Real iPhone frame (Dynamic Island, side buttons, home indicator), sized to
+// the actual 19.5:9 Pro Max aspect ratio (not a guessed height) so it reads as
+// a real device, not a stretched icon. Static resting pose — no idle bob/sway
+// — with a pointer-tracked tilt only while the user is actively hovering (a
+// no-op on touch/mobile and fully still under prefers-reduced-motion). The
+// job feed genuinely scrolls on hover/drag so the mock is something you
+// interact with, not a still image. Screen content mirrors the real app 1:1 —
+// same tokens as app-shell.tsx (brown #7c4a21 section title, JobBoardCard.tsx
+// layout/colors, BottomNav icons/order) — not a generic mock.
 function PhoneMockup() {
   const reduce = useReducedMotion();
   const frameRef = useRef<HTMLDivElement>(null);
 
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
-  const spring = { stiffness: 140, damping: 16, mass: 0.6 };
-  const rotateY = useSpring(useTransform(mx, [-0.5, 0.5], [-16, 16]), spring);
-  const rotateX = useSpring(useTransform(my, [-0.5, 0.5], [12, -12]), spring);
+  const spring = { stiffness: 260, damping: 22, mass: 0.5 };
+  const rotateY = useSpring(useTransform(mx, [-0.5, 0.5], [-8, 8]), spring);
+  const rotateX = useSpring(useTransform(my, [-0.5, 0.5], [6, -6]), spring);
   const glowX = useTransform(mx, [-0.5, 0.5], [0, 100]);
   const glowY = useTransform(my, [-0.5, 0.5], [0, 100]);
 
@@ -191,120 +194,122 @@ function PhoneMockup() {
   const onPointerLeave = () => { mx.set(0); my.set(0); };
 
   return (
-    <div style={{ perspective: 1400 }} className="mx-auto w-[248px]">
-      {/* idle float — separate layer from pointer-tilt so they compose cleanly */}
+    <div style={{ perspective: 1600 }} className="mx-auto w-[272px]">
       <motion.div
-        animate={reduce ? undefined : { y: [0, -7, 0], rotateZ: [0, 0.9, 0, -0.9, 0] }}
-        transition={reduce ? undefined : { duration: 7, repeat: Infinity, ease: "easeInOut" }}
+        ref={frameRef}
+        onPointerMove={onPointerMove}
+        onPointerLeave={onPointerLeave}
+        whileHover={reduce ? undefined : { scale: 1.015 }}
+        transition={{ type: "spring", stiffness: 300, damping: 24 }}
+        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+        className="relative"
       >
-        <motion.div
-          ref={frameRef}
-          onPointerMove={onPointerMove}
-          onPointerLeave={onPointerLeave}
-          style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-          className="relative"
-        >
-          {/* drop shadow that reads as "lifted off the page" */}
-          <div className="absolute -inset-x-6 -bottom-6 top-10 -z-10 rounded-[3rem] bg-black/25 blur-2xl" style={{ transform: "translateZ(-40px)" }} />
+        {/* drop shadow that reads as "resting on the page" */}
+        <div className="absolute -inset-x-8 -bottom-8 top-6 -z-10 rounded-[3rem] bg-black/25 blur-2xl" style={{ transform: "translateZ(-40px)" }} />
 
-          {/* titanium frame */}
-          <div className="relative rounded-[2.7rem] bg-gradient-to-br from-neutral-700 via-neutral-900 to-black p-[3px] shadow-[0_2px_0_rgba(255,255,255,0.15)_inset]">
-            <div className="rounded-[2.55rem] bg-black p-[9px]">
-              {/* side buttons (cosmetic, on the outer frame) */}
-              <span className="absolute -left-[2px] top-[92px] h-6 w-[3px] rounded-l-sm bg-neutral-800" />
-              <span className="absolute -left-[2px] top-[124px] h-10 w-[3px] rounded-l-sm bg-neutral-800" />
-              <span className="absolute -left-[2px] top-[168px] h-10 w-[3px] rounded-l-sm bg-neutral-800" />
-              <span className="absolute -right-[2px] top-[128px] h-14 w-[3px] rounded-r-sm bg-neutral-800" />
+        {/* titanium frame — real Pro Max aspect ratio (19.5:9), not a fixed guessed height */}
+        <div className="relative aspect-[9/19.5] rounded-[3rem] bg-gradient-to-br from-[#b8b5ac] via-[#82807a] to-[#48473f] p-[2.5px] shadow-[0_1px_0_rgba(255,255,255,0.35)_inset,0_-1px_0_rgba(0,0,0,0.4)_inset]">
+          <div className="relative flex h-full flex-col overflow-hidden rounded-[2.85rem] bg-black p-[5px]">
+            {/* side buttons (cosmetic, on the outer frame) */}
+            <span className="absolute -left-[2px] top-[15%] h-5 w-[2.5px] rounded-l-sm bg-[#3a3934]" />
+            <span className="absolute -left-[2px] top-[21%] h-9 w-[2.5px] rounded-l-sm bg-[#3a3934]" />
+            <span className="absolute -left-[2px] top-[29%] h-9 w-[2.5px] rounded-l-sm bg-[#3a3934]" />
+            <span className="absolute -right-[2px] top-[22%] h-12 w-[2.5px] rounded-r-sm bg-[#3a3934]" />
 
-              {/* screen */}
-              <div className="relative overflow-hidden rounded-[2rem] bg-white">
-                {/* Dynamic Island */}
-                <div className="absolute left-1/2 top-[8px] z-30 h-[16px] w-[64px] -translate-x-1/2 rounded-full bg-black" />
+            {/* screen */}
+            <div className="relative flex h-full flex-col overflow-hidden rounded-[2.5rem] bg-white">
+              {/* Dynamic Island */}
+              <div className="absolute left-1/2 top-[1.4%] z-30 h-[16px] w-[68px] -translate-x-1/2 rounded-full bg-black" />
 
-                {/* status bar */}
-                <div className="relative z-20 flex items-center justify-between px-4 pb-1 pt-[10px] text-[9px] font-semibold text-foreground">
-                  <span>11:27</span>
-                  <div className="flex items-center gap-1">
-                    <span className="flex items-end gap-[1.5px]">
-                      {[3, 5, 7, 9].map((h) => (
-                        <span key={h} className="w-[2.5px] rounded-[1px] bg-foreground" style={{ height: h }} />
-                      ))}
-                    </span>
-                    <Wifi className="h-[10px] w-[10px]" strokeWidth={2.5} />
-                    <span className="rounded-[3px] border border-foreground/70 px-[3px] text-[7px] leading-[10px]">100</span>
-                  </div>
-                </div>
-
-                {/* app top panel — mirrors app-shell.tsx header */}
-                <div className="flex items-center gap-2 border-b border-border/70 px-3 py-2">
-                  <Menu className="h-3.5 w-3.5 text-foreground/70" strokeWidth={1.75} />
-                  <span className="text-[10.5px] font-bold tracking-tight text-[#7c4a21]">All Jobs</span>
-                  <span className="ml-auto flex items-center gap-1.5">
-                    <Bell className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
-                    <Settings className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
-                    <span className="h-5 w-5 rounded-full bg-gradient-to-br from-[hsl(221,83%,60%)] to-[hsl(262,83%,58%)] ring-1 ring-border" />
+              {/* status bar */}
+              <div className="relative z-20 flex shrink-0 items-center justify-between px-4 pb-1 pt-[10px] text-[9px] font-semibold text-foreground">
+                <span>11:27</span>
+                <div className="flex items-center gap-1">
+                  <span className="flex items-end gap-[1.5px]">
+                    {[3, 5, 7, 9].map((h) => (
+                      <span key={h} className="w-[2.5px] rounded-[1px] bg-foreground" style={{ height: h }} />
+                    ))}
                   </span>
+                  <Wifi className="h-[10px] w-[10px]" strokeWidth={2.5} />
+                  <span className="rounded-[3px] border border-foreground/70 px-[3px] text-[7px] leading-[10px]">100</span>
                 </div>
-
-                {/* job feed */}
-                <div className="relative h-[300px] overflow-hidden bg-muted/20">
-                  <div className="space-y-2 p-2">
-                    <MockJobCard
-                      logo="W" logoClass="bg-indigo-600"
-                      title="WWF Africa Hiring Remote Consultants t…"
-                      salary="$300"
-                      location="Remote" posted="Posted today"
-                      pills={["Contract", "Remote", "Global", "Remote"]}
-                      desc="WWF Africa Consultancy Opportunity 2026: Remote Stakeholder Mapping and Climate & Biodiversity Networks Consultant…"
-                    />
-                    <MockJobCard
-                      logo="C" logoClass="bg-rose-600"
-                      title="The Chamber of Mines of Zimbabwe: Student Attachme…"
-                      location="Zimbabwe" posted="Posted today"
-                      pills={["Contract", "Zimbabwe", "Onsite", "Zimbabwe"]}
-                      desc="Student Attachment Opportunities at The Chamber of Mines of Zimbabwe — Apply by July 7, 2026…"
-                    />
-                  </div>
-                  {/* fade so the second card reads as "more below", matching the real scroll view */}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent" />
-                </div>
-
-                {/* bottom tab bar — mirrors BottomNav in app-shell.tsx */}
-                <div className="flex items-stretch justify-around border-t border-border bg-white py-1.5">
-                  {[
-                    { label: "Home", Icon: Home },
-                    { label: "Jobs", Icon: Briefcase, active: true },
-                    { label: "Matches", Icon: Sparkles },
-                    { label: "Apply", Icon: Send },
-                    { label: "Applied", Icon: ClipboardCheck },
-                  ].map(({ label, Icon, active }) => (
-                    <span key={label} className={`relative flex flex-1 flex-col items-center gap-0.5 text-[5.5px] font-medium ${active ? "text-[hsl(221,83%,53%)]" : "text-muted-foreground"}`}>
-                      {active && <span className="absolute -top-1.5 h-[2px] w-3 rounded-full bg-[hsl(221,83%,53%)]" />}
-                      <Icon className="h-3 w-3" strokeWidth={active ? 2.2 : 1.8} />
-                      {label}
-                    </span>
-                  ))}
-                </div>
-
-                {/* home indicator */}
-                <div className="flex justify-center bg-white pb-[6px] pt-[3px]">
-                  <span className="h-[3px] w-[70px] rounded-full bg-black/80" />
-                </div>
-
-                {/* glossy reflection, tracks the pointer for a real "glass" feel */}
-                <motion.div
-                  className="pointer-events-none absolute inset-0 z-40 opacity-40"
-                  style={{
-                    background: useTransform(
-                      [glowX, glowY],
-                      ([gx, gy]: number[]) => `radial-gradient(220px circle at ${gx}% ${gy}%, rgba(255,255,255,0.5), transparent 60%)`,
-                    ),
-                  }}
-                />
               </div>
+
+              {/* app top panel — mirrors app-shell.tsx header */}
+              <div className="flex shrink-0 items-center gap-2 border-b border-border/70 px-3 py-2">
+                <Menu className="h-3.5 w-3.5 text-foreground/70" strokeWidth={1.75} />
+                <span className="text-[10.5px] font-bold tracking-tight text-[#7c4a21]">All Jobs</span>
+                <span className="ml-auto flex items-center gap-1.5">
+                  <Bell className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
+                  <Settings className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
+                  <span className="h-5 w-5 rounded-full bg-gradient-to-br from-[hsl(221,83%,60%)] to-[hsl(262,83%,58%)] ring-1 ring-border" />
+                </span>
+              </div>
+
+              {/* job feed — genuinely scrollable, fills remaining height (real aspect ratio, not a fixed px guess) */}
+              <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain bg-muted/20 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="space-y-2 p-2">
+                  <MockJobCard
+                    logo="W" logoClass="bg-indigo-600"
+                    title="WWF Africa Hiring Remote Consultants t…"
+                    salary="$300"
+                    location="Remote" posted="Posted today"
+                    pills={["Contract", "Remote", "Global", "Remote"]}
+                    desc="WWF Africa Consultancy Opportunity 2026: Remote Stakeholder Mapping and Climate & Biodiversity Networks Consultant…"
+                  />
+                  <MockJobCard
+                    logo="C" logoClass="bg-rose-600"
+                    title="The Chamber of Mines of Zimbabwe: Student Attachme…"
+                    location="Zimbabwe" posted="Posted today"
+                    pills={["Contract", "Zimbabwe", "Onsite", "Zimbabwe"]}
+                    desc="Student Attachment Opportunities at The Chamber of Mines of Zimbabwe — Apply by July 7, 2026…"
+                  />
+                  <MockJobCard
+                    logo="P" logoClass="bg-emerald-600"
+                    title="ProCredit Bank Zimbabwe: Graduate Trainee Program…"
+                    salary="$450"
+                    location="Harare" posted="Posted 2h ago"
+                    pills={["Full-time", "Harare", "Onsite", "Zimbabwe"]}
+                    desc="Graduate Trainee Program 2026 — rotational placement across retail and corporate banking…"
+                  />
+                </div>
+              </div>
+
+              {/* bottom tab bar — mirrors BottomNav in app-shell.tsx */}
+              <div className="flex shrink-0 items-stretch justify-around border-t border-border bg-white py-1.5">
+                {[
+                  { label: "Home", Icon: Home },
+                  { label: "Jobs", Icon: Briefcase, active: true },
+                  { label: "Matches", Icon: Sparkles },
+                  { label: "Apply", Icon: Send },
+                  { label: "Applied", Icon: ClipboardCheck },
+                ].map(({ label, Icon, active }) => (
+                  <span key={label} className={`relative flex flex-1 flex-col items-center gap-0.5 text-[5.5px] font-medium ${active ? "text-[hsl(221,83%,53%)]" : "text-muted-foreground"}`}>
+                    {active && <span className="absolute -top-1.5 h-[2px] w-3 rounded-full bg-[hsl(221,83%,53%)]" />}
+                    <Icon className="h-3 w-3" strokeWidth={active ? 2.2 : 1.8} />
+                    {label}
+                  </span>
+                ))}
+              </div>
+
+              {/* home indicator */}
+              <div className="flex shrink-0 justify-center bg-white pb-[6px] pt-[3px]">
+                <span className="h-[3px] w-[70px] rounded-full bg-black/80" />
+              </div>
+
+              {/* glossy reflection, tracks the pointer for a real "glass" feel */}
+              <motion.div
+                className="pointer-events-none absolute inset-0 z-40 opacity-30"
+                style={{
+                  background: useTransform(
+                    [glowX, glowY],
+                    ([gx, gy]: number[]) => `radial-gradient(220px circle at ${gx}% ${gy}%, rgba(255,255,255,0.5), transparent 60%)`,
+                  ),
+                }}
+              />
             </div>
           </div>
-        </motion.div>
+        </div>
       </motion.div>
     </div>
   );
