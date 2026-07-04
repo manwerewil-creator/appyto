@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion";
 import { toast } from "sonner";
@@ -58,8 +58,9 @@ export default function WelcomePage() {
 
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col items-center overflow-hidden bg-background px-6 py-10">
-      {/* soft brand glow */}
+      {/* layered ambient bloom — one accent (teal), a faint brand-brown echo lower down for depth */}
       <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[#159e8c]/15 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-32 right-[-10%] h-64 w-64 rounded-full bg-[#7c4a21]/[0.06] blur-3xl" />
 
       <div className="relative flex w-full max-w-sm flex-1 flex-col items-center text-center">
         {/* Brand */}
@@ -72,33 +73,43 @@ export default function WelcomePage() {
           <span className="text-2xl font-extrabold tracking-tight">Feasters</span>
         </motion.div>
 
+        {/* Eyebrow */}
+        <motion.span
+          {...rise(0.06)}
+          className="mt-6 inline-flex items-center gap-1.5 rounded-full border border-[#159e8c]/25 bg-[#159e8c]/[0.08] px-3 py-1 text-[12px] font-semibold text-[#0f7a6c]"
+        >
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#159e8c]" />
+          30,000+ jobs in Zimbabwe, updated daily
+        </motion.span>
+
         {/* Headline */}
-        <motion.h1 {...rise(0.12)} className="mt-8 text-balance text-[28px] font-extrabold leading-[1.15] tracking-tight">
-          Apply to jobs faster, right from your phone
+        <motion.h1 {...rise(0.14)} className="mt-5 text-balance text-[28px] font-extrabold leading-[1.15] tracking-tight">
+          Apply to jobs <span className="text-[#159e8c]">faster</span>, right from your phone
         </motion.h1>
-        <motion.p {...rise(0.2)} className="mx-auto mt-3 max-w-xs text-pretty text-sm leading-relaxed text-muted-foreground">
-          Over 30,000 jobs in Zimbabwe, matched to you and applied for from your own inbox. Install the app and carry it with you.
+        <motion.p {...rise(0.22)} className="mx-auto mt-3 max-w-xs text-pretty text-sm leading-relaxed text-muted-foreground">
+          Jobs matched to you and applied for from your own inbox. Install the app and carry it with you.
         </motion.p>
 
         {/* Phone mockup */}
-        <motion.div {...rise(0.28)} className="mt-8 w-full">
+        <motion.div {...rise(0.3)} className="mt-8 w-full">
           <PhoneMockup />
         </motion.div>
 
         {/* Trust row */}
-        <motion.div {...rise(0.34)} className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#159e8c]" /> Works on iPhone &amp; Android</span>
-          <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#159e8c]" /> No app store needed</span>
+        <motion.div {...rise(0.36)} className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#159e8c]" aria-hidden /> Works on iPhone &amp; Android</span>
+          <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#159e8c]" aria-hidden /> No app store needed</span>
+          <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#159e8c]" aria-hidden /> Free to start</span>
         </motion.div>
 
         {/* CTA */}
-        <motion.div {...rise(0.4)} className="mt-6 w-full space-y-3">
+        <motion.div {...rise(0.42)} className="mt-6 w-full space-y-3">
           <Button
             onClick={onPrimary}
             disabled={busy}
             className="h-12 w-full rounded-full bg-[#159e8c] text-base font-semibold text-white shadow-sm hover:bg-[#11856f]"
           >
-            {!isStandalone && <Download className="h-5 w-5" />}
+            {!isStandalone && <Download className="h-5 w-5" aria-hidden />}
             {primaryLabel}
           </Button>
 
@@ -111,6 +122,22 @@ export default function WelcomePage() {
               Continue in browser
             </button>
           )}
+        </motion.div>
+
+        {/* How it works */}
+        <motion.div {...rise(0.48)} className="mt-10 w-full rounded-2xl border border-border/70 bg-muted/20 p-4 text-left">
+          <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">How it works</p>
+          <ol className="space-y-3">
+            <HowStep icon={<Sparkles className="h-4 w-4" aria-hidden />} title="We match you to jobs">
+              Your profile is scored against every open role, automatically.
+            </HowStep>
+            <HowStep icon={<Send className="h-4 w-4" aria-hidden />} title="Applications go out for you">
+              One tap sends a real email from your own inbox — employers see it's from you.
+            </HowStep>
+            <HowStep icon={<ClipboardCheck className="h-4 w-4" aria-hidden />} title="Track every application">
+              See what's sent, matched, and waiting — all in one place.
+            </HowStep>
+          </ol>
         </motion.div>
       </div>
 
@@ -153,6 +180,18 @@ export default function WelcomePage() {
   );
 }
 
+function HowStep({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#159e8c]/10 text-[#159e8c]">{icon}</span>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <p className="text-[13px] font-semibold leading-tight">{title}</p>
+        <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">{children}</p>
+      </div>
+    </li>
+  );
+}
+
 function IosStep({ n, icon, children }: { n: number; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <li className="flex items-center gap-3">
@@ -169,13 +208,14 @@ function IosStep({ n, icon, children }: { n: number; icon: React.ReactNode; chil
 // a real device, not a stretched icon. Static resting pose — no idle bob/sway
 // — with a pointer-tracked tilt only while the user is actively hovering (a
 // no-op on touch/mobile and fully still under prefers-reduced-motion). The
-// job feed genuinely scrolls on hover/drag so the mock is something you
-// interact with, not a still image. Screen content mirrors the real app 1:1 —
-// same tokens as app-shell.tsx (brown #7c4a21 section title, JobBoardCard.tsx
-// layout/colors, BottomNav icons/order) — not a generic mock.
+// job feed genuinely scrolls on hover/drag, and a one-shot "applied" toast
+// demonstrates the core value prop (auto-apply) without looping. Screen
+// content mirrors the real app 1:1 — same tokens as app-shell.tsx (brown
+// #7c4a21 section title, JobBoardCard.tsx layout/colors, BottomNav order).
 function PhoneMockup() {
   const reduce = useReducedMotion();
   const frameRef = useRef<HTMLDivElement>(null);
+  const [toastVisible, setToastVisible] = useState(false);
 
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
@@ -184,6 +224,13 @@ function PhoneMockup() {
   const rotateX = useSpring(useTransform(my, [-0.5, 0.5], [6, -6]), spring);
   const glowX = useTransform(mx, [-0.5, 0.5], [0, 100]);
   const glowY = useTransform(my, [-0.5, 0.5], [0, 100]);
+
+  useEffect(() => {
+    if (reduce) return; // one-shot only — never loops, and skipped entirely under reduced motion
+    const inT = setTimeout(() => setToastVisible(true), 1400);
+    const outT = setTimeout(() => setToastVisible(false), 4600);
+    return () => { clearTimeout(inT); clearTimeout(outT); };
+  }, [reduce]);
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (reduce || e.pointerType !== "mouse" || !frameRef.current) return;
@@ -296,6 +343,22 @@ function PhoneMockup() {
               <div className="flex shrink-0 justify-center bg-white pb-[6px] pt-[3px]">
                 <span className="h-[3px] w-[70px] rounded-full bg-black/80" />
               </div>
+
+              {/* one-shot "applied" toast — demonstrates the core auto-apply value prop, never loops */}
+              <motion.div
+                initial={false}
+                animate={toastVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: -14 }}
+                transition={{ duration: 0.35, ease: [0.2, 0.7, 0.2, 1] }}
+                className="pointer-events-none absolute inset-x-2 top-[26%] z-40 flex items-center gap-1.5 rounded-xl border border-border/70 bg-white/95 px-2.5 py-2 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.25)] backdrop-blur"
+              >
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[hsl(142,71%,45%)] text-white">
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
+                <p className="text-[7.5px] font-semibold leading-tight text-foreground">
+                  Applied to ProCredit Bank Zimbabwe
+                  <span className="block font-normal text-muted-foreground">Sent from your inbox, just now</span>
+                </p>
+              </motion.div>
 
               {/* glossy reflection, tracks the pointer for a real "glass" feel */}
               <motion.div
