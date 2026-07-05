@@ -9,14 +9,40 @@ import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { usePwaInstall } from "../_components/usePwaInstall";
+import { SceneBoundary } from "./SceneBoundary";
 import {
   Download, Share, SquarePlus, Check, Briefcase, Send, Menu, Bell, Settings,
   MapPin, CalendarDays, FileText, X, Heart, Home, Sparkles, ClipboardCheck, Wifi, Mail,
 } from "lucide-react";
 
 // WebGL scene — client + browser only, dynamically imported so it never
-// touches the server render.
+// touches the server render (server-side prerendering doesn't need to
+// evaluate three.js/@react-three/fiber at all this way).
 const HeroScene = dynamic(() => import("./HeroScene"), { ssr: false });
+
+// Some devices/browsers (VMs without GPU passthrough, locked-down corporate
+// machines, older WebViews) can't create a WebGL context at all — three.js
+// throws synchronously in that case. Check up front rather than let it crash;
+// the SceneBoundary below is the safety net for everything this can't predict
+// (context lost mid-session, driver crash, etc.).
+function supportsWebGL() {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(canvas.getContext("webgl2") || canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
+  } catch {
+    return false;
+  }
+}
+
+// Plain CSS ambient glow — used whenever the 3D scene can't run, so degraded
+// browsers still get a nice-looking backdrop instead of a blank box.
+function HeroGlowFallback() {
+  return (
+    <div aria-hidden className="absolute inset-0 flex items-center justify-center">
+      <div className="h-64 w-64 rounded-full bg-[#159e8c]/20 blur-[80px]" />
+    </div>
+  );
+}
 
 /**
  * First-touch landing at feasters.cloud. Feasters is a PWA — this page sells the
@@ -37,6 +63,9 @@ export default function WelcomePage() {
   const { canInstall, isIOS, isStandalone, promptInstall } = usePwaInstall();
   const [iosOpen, setIosOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [webglOk, setWebglOk] = useState(false);
+
+  useEffect(() => { setWebglOk(supportsWebGL()); }, []);
 
   const primaryLabel = isStandalone
     ? "Open Feasters"
@@ -142,7 +171,13 @@ export default function WelcomePage() {
             className="relative mx-auto h-[520px] w-full max-w-[420px] sm:h-[600px]"
           >
             <div className="absolute inset-0 -z-0">
-              <HeroScene reduceMotion={!!reduce} />
+              {webglOk ? (
+                <SceneBoundary fallback={<HeroGlowFallback />}>
+                  <HeroScene reduceMotion={!!reduce} />
+                </SceneBoundary>
+              ) : (
+                <HeroGlowFallback />
+              )}
             </div>
             <div className="relative z-10 flex h-full items-center justify-center">
               <PhoneFrame bg="dark" interactive>
