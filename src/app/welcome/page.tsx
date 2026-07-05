@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion";
@@ -13,16 +14,22 @@ import {
   MapPin, CalendarDays, FileText, X, Heart, Home, Sparkles, ClipboardCheck, Wifi, Mail,
 } from "lucide-react";
 
+// WebGL scene — client + browser only, dynamically imported so it never
+// touches the server render.
+const HeroScene = dynamic(() => import("./HeroScene"), { ssr: false });
+
 /**
  * First-touch landing at feasters.cloud. Feasters is a PWA — this page sells the
  * app and gets it installed on the phone (native prompt on Android, guided
  * "Add to Home Screen" on iOS), so people use it as a standalone app, not a tab.
- * "Continue in browser" stays available (installing requires a browser visit).
+ * The only path forward is installing — there is no "continue in the browser"
+ * bypass link anywhere on this page, by design.
  *
- * Structure (Cal AI / Apple product-page pattern): dark confident hero →
- * alternating light feature-walkthrough sections, each pairing one real
- * feature with one phone-screen mockup → dark closing CTA band. No fabricated
- * ratings/testimonials — Feasters doesn't have real ones yet to show.
+ * Structure (Cal AI / Apple product-page pattern): dark confident split hero
+ * (copy left, phone + 3D shape backdrop right) → alternating light
+ * feature-walkthrough sections, each pairing one real feature with one
+ * phone-screen mockup → dark closing CTA band. No fabricated ratings/
+ * testimonials — Feasters doesn't have real ones yet to show.
  */
 export default function WelcomePage() {
   const router = useRouter();
@@ -37,7 +44,7 @@ export default function WelcomePage() {
       ? "Install the app"
       : isIOS
         ? "Add to Home Screen"
-        : "Get started";
+        : "Install the app";
 
   const onPrimary = async () => {
     if (isStandalone) { router.push("/login"); return; }
@@ -47,11 +54,12 @@ export default function WelcomePage() {
       setBusy(false);
       if (r === "accepted") toast.success("Installing Feasters — open it from your home screen.");
       else if (r === "dismissed") toast("No problem — you can install anytime from here.");
-      else router.push("/login");
       return;
     }
     if (isIOS) { setIosOpen(true); return; }
-    router.push("/login"); // desktop / unsupported: just continue
+    // Desktop browser without install support (e.g. Firefox, desktop Safari):
+    // no bypass link to the web app — just point them at a browser that can install it.
+    toast("Open this page in Chrome, Edge, or on your phone to install Feasters.");
   };
 
   const reveal = reduce
@@ -74,73 +82,73 @@ export default function WelcomePage() {
         </div>
       </header>
 
-      {/* HERO — dark, confident, one accent (teal) */}
-      <section className="relative overflow-hidden bg-[#0a0e0d] px-6 pb-20 pt-16 text-center text-white sm:pb-28 sm:pt-20">
-        <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#159e8c]/20 blur-[100px]" />
-        <div aria-hidden className="pointer-events-none absolute bottom-0 right-[-15%] h-72 w-72 rounded-full bg-[#159e8c]/10 blur-[90px]" />
+      {/* HERO — dark, confident, split layout: copy left, phone + 3D shapes right */}
+      <section className="relative overflow-hidden bg-[#0a0e0d] px-6 py-16 text-white sm:py-20">
+        <div aria-hidden className="pointer-events-none absolute -top-24 left-1/4 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#159e8c]/15 blur-[110px]" />
+        <div aria-hidden className="pointer-events-none absolute bottom-0 right-[-10%] h-72 w-72 rounded-full bg-[#159e8c]/10 blur-[90px]" />
 
-        <div className="relative mx-auto flex max-w-sm flex-col items-center">
-          <motion.span
-            {...(reduce ? {} : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45 } })}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#159e8c]/30 bg-[#159e8c]/10 px-3 py-1 text-[12px] font-semibold text-[#5fd6c4]"
-          >
-            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#5fd6c4]" />
-            30,000+ jobs in Zimbabwe, updated daily
-          </motion.span>
-
-          <motion.h1
-            {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, delay: 0.08 } })}
-            className="mt-5 text-balance text-[36px] font-extrabold leading-[1.08] tracking-tight sm:text-[44px]"
-          >
-            Apply to jobs faster.<br />
-            <span className="text-[#5fd6c4]">From your own inbox.</span>
-          </motion.h1>
-          <motion.p
-            {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, delay: 0.16 } })}
-            className="mx-auto mt-4 max-w-xs text-pretty text-[15px] leading-relaxed text-white/60"
-          >
-            Feasters matches you to real openings and sends the application for you — no forms, no rewriting your CV for every job.
-          </motion.p>
-
-          <motion.div
-            {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, delay: 0.24 } })}
-            className="mt-7 w-full max-w-[280px] space-y-3"
-          >
-            <Button
-              onClick={onPrimary}
-              disabled={busy}
-              className="h-12 w-full rounded-full bg-[#159e8c] text-base font-semibold text-white hover:bg-[#11856f]"
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-8">
+          {/* copy */}
+          <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+            <motion.span
+              {...(reduce ? {} : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45 } })}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#159e8c]/30 bg-[#159e8c]/10 px-3 py-1 text-[12px] font-semibold text-[#5fd6c4]"
             >
-              {!isStandalone && <Download className="h-5 w-5" aria-hidden />}
-              {primaryLabel}
-            </Button>
-            {!isStandalone && (
-              <button
-                type="button"
-                onClick={() => router.push("/login")}
-                className="text-sm font-medium text-white/60 underline-offset-4 hover:text-white hover:underline"
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#5fd6c4]" />
+              30,000+ jobs in Zimbabwe, updated daily
+            </motion.span>
+
+            <motion.h1
+              {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, delay: 0.08 } })}
+              className="mt-5 text-balance text-[36px] font-extrabold leading-[1.08] tracking-tight sm:text-[48px] lg:text-[52px]"
+            >
+              Apply to jobs faster.<br />
+              <span className="text-[#5fd6c4]">From your own inbox.</span>
+            </motion.h1>
+            <motion.p
+              {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, delay: 0.16 } })}
+              className="mx-auto mt-4 max-w-xs text-pretty text-[15px] leading-relaxed text-white/60 lg:mx-0 lg:max-w-sm"
+            >
+              Feasters matches you to real openings and sends the application for you — no forms, no rewriting your CV for every job.
+            </motion.p>
+
+            <motion.div
+              {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, delay: 0.24 } })}
+              className="mt-7 w-full max-w-[280px]"
+            >
+              <Button
+                onClick={onPrimary}
+                disabled={busy}
+                className="h-12 w-full rounded-full bg-[#159e8c] text-base font-semibold text-white hover:bg-[#11856f]"
               >
-                Continue in browser
-              </button>
-            )}
-          </motion.div>
+                {!isStandalone && <Download className="h-5 w-5" aria-hidden />}
+                {primaryLabel}
+              </Button>
+            </motion.div>
 
-          <motion.div
-            {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, delay: 0.3 } })}
-            className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/50"
-          >
-            <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#5fd6c4]" aria-hidden /> iPhone &amp; Android</span>
-            <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#5fd6c4]" aria-hidden /> No app store needed</span>
-            <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#5fd6c4]" aria-hidden /> Free to start</span>
-          </motion.div>
+            <motion.div
+              {...(reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, delay: 0.3 } })}
+              className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/50 lg:justify-start"
+            >
+              <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#5fd6c4]" aria-hidden /> iPhone &amp; Android</span>
+              <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#5fd6c4]" aria-hidden /> No app store needed</span>
+              <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-[#5fd6c4]" aria-hidden /> Free to start</span>
+            </motion.div>
+          </div>
 
+          {/* phone + 3D shape backdrop */}
           <motion.div
-            {...(reduce ? {} : { initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.6, delay: 0.36 } })}
-            className="mt-10 w-full"
+            {...(reduce ? {} : { initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 }, transition: { duration: 0.8, delay: 0.3, ease: [0.2, 0.7, 0.2, 1] } })}
+            className="relative mx-auto h-[520px] w-full max-w-[420px] sm:h-[600px]"
           >
-            <PhoneFrame bg="dark" interactive>
-              <JobFeedScene />
-            </PhoneFrame>
+            <div className="absolute inset-0 -z-0">
+              <HeroScene reduceMotion={!!reduce} />
+            </div>
+            <div className="relative z-10 flex h-full items-center justify-center">
+              <PhoneFrame bg="dark" interactive>
+                <JobFeedScene />
+              </PhoneFrame>
+            </div>
           </motion.div>
         </div>
       </section>
@@ -198,7 +206,7 @@ export default function WelcomePage() {
           <p className="mx-auto mt-3 max-w-xs text-[15px] leading-relaxed text-white/60">
             Install Feasters and let your next application write itself.
           </p>
-          <div className="mt-7 w-full max-w-[280px] space-y-3">
+          <div className="mt-7 w-full max-w-[280px]">
             <Button
               onClick={onPrimary}
               disabled={busy}
@@ -207,15 +215,6 @@ export default function WelcomePage() {
               {!isStandalone && <Download className="h-5 w-5" aria-hidden />}
               {primaryLabel}
             </Button>
-            {!isStandalone && (
-              <button
-                type="button"
-                onClick={() => router.push("/login")}
-                className="text-sm font-medium text-white/60 underline-offset-4 hover:text-white hover:underline"
-              >
-                Continue in browser
-              </button>
-            )}
           </div>
         </motion.div>
       </section>
