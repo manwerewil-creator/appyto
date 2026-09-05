@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import JobBoardCard from "../_components/JobBoardCard";
 import ComposeModal from "../_components/ComposeModal";
-import QuotaBanner from "../_components/QuotaBanner";
 import { useApplyFlow } from "../_components/useApplyFlow";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,7 +29,7 @@ export default function JobsPage() {
   const [onlyEmail, setOnlyEmail] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [passed, setPassed] = useState<Set<string>>(new Set());
-  const { quota, applyingId, appliedIds, composeJob, setComposeJob, apply, onComposeSent } = useApplyFlow();
+  const { applyingId, appliedIds, composeJob, setComposeJob, apply, onComposeSent } = useApplyFlow();
   const [facets, setFacets] = useState<{ categories: Facet[]; locations: Facet[]; types: Facet[] }>({
     categories: [], locations: [], types: [],
   });
@@ -102,8 +101,6 @@ export default function JobsPage() {
           <RefreshCw className={refreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} /> Refresh
         </Button>
       </div>
-
-      <QuotaBanner quota={quota} />
 
       {/* Search + filter pills — search takes the full row on mobile, filters wrap below */}
       <div className="flex flex-wrap items-center gap-2.5">

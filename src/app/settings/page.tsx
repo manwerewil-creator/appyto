@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   ChevronRight, UserRound, Mail, MailCheck, RefreshCw,
-  SlidersHorizontal, Crown, LogOut, Check, X, Loader2, Eye, Zap,
+  SlidersHorizontal, LogOut, Check, X, Loader2, Eye, Zap,
 } from "lucide-react";
 
 // The Google "G" mark, so "Connect with Google" reads as the real thing.
@@ -284,17 +284,6 @@ export default function SettingsPage() {
             </motion.div>
           )}
         </AnimatePresence>
-        <Divider />
-
-        <Link href="/billing" className="block transition-colors hover:bg-muted/50">
-          <RowShell
-            icon={<Crown className="h-[18px] w-[18px]" strokeWidth={1.75} />}
-            tint="bg-amber-500/10 text-amber-600"
-            title="Plan & billing"
-            sub="Upgrade for a higher daily cap"
-            trailing={<Chevron />}
-          />
-        </Link>
       </Group>
 
       {/* ── Logout ─────────────────────────────────────────────────────────── */}

@@ -5,14 +5,12 @@ import Link from "next/link";
 import { toast } from "sonner";
 import JobCard from "../_components/JobCard";
 import ComposeModal from "../_components/ComposeModal";
-import QuotaBanner from "../_components/QuotaBanner";
-import UpgradeGate from "../_components/UpgradeGate";
 import { useApplyFlow } from "../_components/useApplyFlow";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, Eye, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PLANS, type PlanId } from "@/lib/plans";
+import { dailyCapOf } from "@/lib/plans";
 import type { Job } from "@/lib/types";
 
 type Match = Job & { score: number; reasons: string[]; applied: boolean };
@@ -23,7 +21,7 @@ export default function MatchesPage() {
   const { quota, applyingId, appliedIds, composeJob, setComposeJob, apply, onComposeSent, setAutoSend } = useApplyFlow();
   const autoSend = quota?.autoSend ?? false;
   // Auto-apply (the bulk action) needs a plan with a daily allowance.
-  const canAutoApply = !!quota && (PLANS[quota.planId as PlanId]?.dailyApplyCap ?? 0) > 0;
+  const canAutoApply = !!quota && dailyCapOf(quota.planId) > 0;
 
   const load = useCallback(async () => {
     const r = await fetch("/api/matches"); setData(await r.json());
@@ -40,18 +38,6 @@ export default function MatchesPage() {
     load();
   };
 
-  // Matching is a paid feature (Base and up).
-  if (quota && !quota.isPaid) return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-      <UpgradeGate
-        title="Job matching is a paid feature"
-        description="We score every job in Zimbabwe against your profile and surface your strongest matches — on any paid plan."
-        bullets={["Smart match scoring on every job", "Auto-apply to your matches", "Application tracking"]}
-        cta="Unlock matching"
-      />
-    </div>
-  );
-
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -67,7 +53,6 @@ export default function MatchesPage() {
         </Button>
       </div>
 
-      <QuotaBanner quota={quota} />
 
       {/* Send mode: preview each email (default) vs send instantly on Apply. */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3">

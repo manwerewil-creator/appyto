@@ -7,19 +7,13 @@ import type { ComposeJob } from "./ComposeModal";
 
 export interface Quota {
   planId: string;
-  isPaid: boolean;
   autoSend: boolean;
-  limit: number | null;
-  used: number;
-  remaining: number | null;
-  blocked: boolean;
 }
 
 // One place for the "apply to a job" behaviour shared by the job board, matches
 // and internships:
 //   • respects the user's send preference — auto-send vs review/customise first
-//     (which opens the ComposeModal), and
-//   • enforces the free-tier allowance, prompting an upgrade when it's spent.
+//     (which opens the ComposeModal).
 export function useApplyFlow() {
   const [quota, setQuota] = useState<Quota | null>(null);
   const [applyingId, setApplyingId] = useState<string | null>(null);
@@ -35,16 +29,7 @@ export function useApplyFlow() {
     setAppliedIds((s) => new Set(s).add(id));
   }, []);
 
-  const upgradeToast = useCallback(() => {
-    toast.error("You've used your free applications", {
-      description: "Upgrade to a plan to keep applying.",
-      action: { label: "Upgrade", onClick: () => { window.location.href = "/billing"; } },
-    });
-  }, []);
-
   const apply = useCallback(async (job: Job) => {
-    if (quota?.blocked) { upgradeToast(); return; }
-
     // Review mode (default, and the safe fallback while quota is still loading):
     // open the composer so the user can preview / edit before it sends.
     if (!quota?.autoSend) {
@@ -64,9 +49,6 @@ export function useApplyFlow() {
         markApplied(job.id);
         toast.success("Application sent", { description: job.title });
         reloadQuota();
-      } else if (d.upgrade) {
-        upgradeToast();
-        reloadQuota();
       } else {
         toast.error("Could not apply", { description: d.reason ?? "Please try again." });
       }
@@ -75,7 +57,7 @@ export function useApplyFlow() {
     } finally {
       setApplyingId(null);
     }
-  }, [quota, markApplied, reloadQuota, upgradeToast]);
+  }, [quota, markApplied, reloadQuota]);
 
   // Flip the send preference (auto vs review) and persist it to the profile.
   const setAutoSend = useCallback(async (v: boolean) => {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Briefcase, Target, Send, Inbox, FileText, Crown, Settings, LogOut, Menu,
+  LayoutDashboard, Briefcase, Target, Send, Inbox, FileText, Settings, LogOut, Menu,
   Home, Sparkles, ClipboardCheck, GraduationCap, type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -29,7 +29,6 @@ const NAV: NavItem[] = [
   { href: "/quick-apply", label: "Quick Apply", Icon: Send },
   { href: "/applications", label: "Applications", Icon: Inbox },
   { href: "/resume", label: "CV Builder", Icon: FileText },
-  { href: "/billing", label: "Upgrade", Icon: Crown, highlight: true },
 ];
 
 // Mobile bottom bar (max 5).
@@ -52,7 +51,6 @@ const PAGE_TITLES: { match: string; title: string }[] = [
   { match: "/quick-apply", title: "Quick Apply" },
   { match: "/applications", title: "Applications" },
   { match: "/resume", title: "CV Builder" },
-  { match: "/billing", title: "Upgrade" },
   { match: "/settings", title: "Settings" },
   { match: "/onboarding", title: "Set up your profile" },
   { match: "/profile", title: "Profile" },

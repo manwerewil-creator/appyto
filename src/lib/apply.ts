@@ -3,13 +3,13 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  fetchJobById, fetchProfile, fetchCreds, hasApplied, appliedToday, sentApplicationsCount,
+  fetchJobById, fetchProfile, fetchCreds, hasApplied, appliedToday,
   addApplication, updateApplication, fetchJobs, logActivity, type ProfileRow,
 } from "./data";
 import { credsToConfig, emailReady, sendApplication } from "./mailer";
 import { supabaseAdmin } from "./supabase/server";
 import { matchJobs, applyableJobs } from "./match";
-import { PLANS, sendLimitOf, type PlanId } from "./plans";
+import { dailyCapOf } from "./plans";
 import type { JobPreferences } from "./types";
 
 function prefsOf(p: ProfileRow | null): JobPreferences {
@@ -23,7 +23,7 @@ function prefsOf(p: ProfileRow | null): JobPreferences {
 }
 
 export function effectiveCap(p: ProfileRow | null): number {
-  const planCap = PLANS[(p?.plan_id as PlanId) ?? "free"]?.dailyApplyCap ?? 0;
+  const planCap = dailyCapOf(p?.plan_id);
   const self = p?.daily_cap ?? planCap;
   return Math.min(planCap, self);
 }
@@ -48,7 +48,7 @@ async function getResourceFiles(p: ProfileRow | null) {
   return out;
 }
 
-export interface ApplyOutcome { ok: boolean; status: string; reason?: string; upgrade?: boolean; }
+export interface ApplyOutcome { ok: boolean; status: string; reason?: string; }
 
 export async function applyToJob(
   sb: SupabaseClient, userId: string, jobId: string,
@@ -61,15 +61,6 @@ export async function applyToJob(
   if (!emailReady(creds)) return { ok: false, status: "failed", reason: "Connect your email in Settings first." };
   if (!job.apply_email) return { ok: false, status: "skipped", reason: "This job has no email to apply to." };
   if (await hasApplied(sb, userId, job.id)) return { ok: false, status: "skipped", reason: "Already applied to this job." };
-
-  // Free-tier lifetime cap: block (and prompt upgrade) once the allowance is spent.
-  const limit = sendLimitOf(profile?.plan_id);
-  if (limit != null && (await sentApplicationsCount(sb, userId)) >= limit) {
-    return {
-      ok: false, status: "limit", upgrade: true,
-      reason: `You've used all ${limit} free applications. Upgrade to a plan to keep applying.`,
-    };
-  }
 
   const rec = await addApplication(sb, {
     user_id: userId, job_id: job.id, job_title: job.title, company: job.company,
