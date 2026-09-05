@@ -1,10 +1,10 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- Appyto — PRODUCTION schema (multi-user, Google login, Paynow subscriptions)
+-- Appyto — PRODUCTION schema (multi-user, Google login)
 -- Run in the Supabase SQL editor. Fully idempotent and NON-destructive: every
 -- statement is create-if-not-exists / create-or-replace / on-conflict-do-update,
 -- so re-running it never drops a table or touches existing user data.
 --
--- ⚠️ The app is LIVE with real users + payments. Do NOT add `drop table`/`drop
+-- ⚠️ The app is LIVE with real users. Do NOT add `drop table`/`drop
 -- schema` statements here. To restructure an existing table, write a targeted,
 -- reversible migration under supabase/migrations/ instead.
 -- ════════════════════════════════════════════════════════════════════════════
@@ -22,12 +22,15 @@ create table if not exists public.plans (
   features        jsonb default '{}'
 );
 
+-- price_usd and is_paid are left over from the removed billing system. Every
+-- plan is free now and the app only reads daily_apply_cap; the columns stay so
+-- this file remains non-destructive.
 insert into public.plans (id, name, price_usd, daily_apply_cap, is_paid, sort) values
-  ('free',      'Free',     0,   0,   false, 0),
-  ('free_plus', 'Free+',    0,   5,   false, 1),
-  ('base',      'Base',     17,  15,  true,  2),
-  ('pro',       'Pro',      25,  50,  true,  3),
-  ('premium',   'Premium',  60,  150, true,  4)
+  ('free',      'Free',     0,   15,  false, 0),
+  ('free_plus', 'Free+',    0,   15,  false, 1),
+  ('base',      'Base',     0,   15,  false, 2),
+  ('pro',       'Pro',      0,   50,  false, 3),
+  ('premium',   'Premium',  0,   150, false, 4)
 on conflict (id) do update set
   name = excluded.name, price_usd = excluded.price_usd,
   daily_apply_cap = excluded.daily_apply_cap, is_paid = excluded.is_paid, sort = excluded.sort;
@@ -128,31 +131,6 @@ returns int language sql stable as $$
   where user_id = p_user and status = 'sent' and sent_at >= date_trunc('day', now());
 $$;
 
--- ─── Paynow subscriptions + payments ────────────────────────────────────────
-create table if not exists public.subscriptions (
-  id            uuid primary key default gen_random_uuid(),
-  user_id       uuid not null references public.profiles(id) on delete cascade,
-  plan_id       text not null references public.plans(id),
-  status        text not null default 'pending', -- pending|active|cancelled|expired
-  period_end    timestamptz,
-  created_at    timestamptz default now(),
-  unique (user_id)
-);
-
-create table if not exists public.payments (
-  id              uuid primary key default gen_random_uuid(),
-  user_id         uuid not null references public.profiles(id) on delete cascade,
-  plan_id         text not null references public.plans(id),
-  amount_usd      numeric not null,
-  reference       text not null,                 -- our merchant reference
-  paynow_poll_url text,
-  paynow_ref      text,
-  status          text not null default 'created', -- created|paid|cancelled|failed
-  created_at      timestamptz default now(),
-  paid_at         timestamptz
-);
-create index if not exists pay_user_idx on public.payments (user_id, created_at desc);
-
 -- ─── Activity log (the app's "memory" of what each user does) ───────────────
 -- A per-user audit trail: applications sent, profile/email updates, plan
 -- changes, onboarding, sign-ins. Append-only, surfaced as a Recent Activity
@@ -191,8 +169,6 @@ create index if not exists analytics_user_idx    on public.analytics_events (use
 alter table public.profiles         enable row level security;
 alter table public.send_credentials enable row level security;
 alter table public.applications     enable row level security;
-alter table public.subscriptions    enable row level security;
-alter table public.payments         enable row level security;
 alter table public.jobs             enable row level security;
 alter table public.plans            enable row level security;
 alter table public.activity_events  enable row level security;
@@ -204,10 +180,6 @@ drop policy if exists "own creds" on public.send_credentials;
 create policy "own creds" on public.send_credentials for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 drop policy if exists "own apps" on public.applications;
 create policy "own apps" on public.applications for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-drop policy if exists "own subs" on public.subscriptions;
-create policy "own subs" on public.subscriptions for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-drop policy if exists "own pays" on public.payments;
-create policy "own pays" on public.payments for select using (auth.uid() = user_id);
 drop policy if exists "own activity" on public.activity_events;
 create policy "own activity" on public.activity_events for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 drop policy if exists "jobs public read" on public.jobs;

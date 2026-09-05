@@ -1,7 +1,7 @@
 // Server Supabase clients.
 //  - supabaseServer(): respects the signed-in user's session (RLS applies).
 //  - supabaseAdmin(): service-role, bypasses RLS. Server-only. Used by the
-//    scraper, Paynow result callback, and anything that must write across users.
+//    scraper, cron jobs, and anything that must write across users.
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";

@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { fetchCreds, fetchJobs } from "@/lib/data";
 import { emailReady } from "@/lib/mailer";
 import { autoApply } from "@/lib/apply";
-import { PLANS, type PlanId } from "@/lib/plans";
+import { dailyCapOf } from "@/lib/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
   for (const p of profiles ?? []) {
     if (Date.now() - startedAt > BUDGET_MS) { stoppedEarly = true; break; }
     try {
-      const cap = PLANS[(p.plan_id as PlanId) ?? "free"]?.dailyApplyCap ?? 0;
+      const cap = dailyCapOf(p.plan_id);
       if (cap > 0) {                                // free tier: no auto-apply
         const creds = await fetchCreds(admin, p.id);
         if (emailReady(creds)) {                    // skip users without email

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Loader2, Send, Paperclip, FileText, FileArchive, Image as ImageIcon, Link2, Eye, Pencil, Sparkles } from "lucide-react";
+import { Loader2, Send, Paperclip, FileText, FileArchive, Image as ImageIcon, Link2, Eye, Pencil } from "lucide-react";
 
 export interface ComposeJob { id: string; title: string; apply_email: string | null; }
 
@@ -39,7 +39,6 @@ export default function ComposeModal({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [upgrade, setUpgrade] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/draft?job_id=${encodeURIComponent(job.id)}`)
@@ -82,7 +81,6 @@ export default function ComposeModal({
       });
       const d = await r.json().catch(() => ({ ok: false, reason: `Send failed (${r.status}). Please try again.` }));
       if (d.ok) onSent();
-      else if (d.upgrade) setUpgrade(d.reason ?? "You've used your free applications.");
       else setError(d.reason ?? "Could not send.");
     } catch (e) {
       setError(
@@ -242,28 +240,17 @@ export default function ComposeModal({
 
             {/* Footer */}
             <div className="sticky bottom-0 border-t bg-background/95 px-5 py-3 backdrop-blur">
-              {upgrade ? (
-                <div className="mb-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-                  <p className="font-semibold">{upgrade}</p>
-                  <p className="text-muted-foreground">Upgrade to a plan to keep sending applications.</p>
-                </div>
-              ) : error ? (
+              {error ? (
                 <div className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                   {error}
                 </div>
               ) : null}
               <div className="flex items-center justify-between gap-2">
                 <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                {upgrade ? (
-                  <Button asChild variant="default" size="lg" className="min-w-[180px]">
-                    <a href="/billing"><Sparkles className="h-4 w-4" /> See plans</a>
-                  </Button>
-                ) : (
-                  <Button variant="success" size="lg" className="min-w-[180px]" onClick={send} disabled={sending || !job.apply_email}>
-                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    Send application
-                  </Button>
-                )}
+                <Button variant="success" size="lg" className="min-w-[180px]" onClick={send} disabled={sending || !job.apply_email}>
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Send application
+                </Button>
               </div>
             </div>
           </div>

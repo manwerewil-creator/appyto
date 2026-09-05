@@ -2,15 +2,14 @@
 
 Engineering handoff doc. Read this top-to-bottom before changing anything.
 
-> **Feasters** (domain **feasters.cloud**, canonical **www.feasters.cloud**) is a
-> Zimbabwe job-application tool. It scrapes every job from two boards, matches
+> **Feasters** is a Zimbabwe job-application tool. It scrapes every job from two boards, matches
 > them to a user with pure code (no AI), and applies on the user's behalf by
 > emailing the employer from the user's own inbox. Positioning everywhere:
 > *"a tool to apply faster — not a guarantee of a job."*
 >
 > **UI rule (important):** never surface internals to users. Do **not** name the
-> payment provider, the job-board sources, or "scraper/scraping" anywhere in the
-> app. Listings must feel like Feasters serves them directly.
+> job-board sources or "scraper/scraping" anywhere in the app. Listings must feel
+> like Feasters serves them directly.
 >
 > The repo folder is still named `Appyto` and the GitHub repo is
 > `manwerewil-creator/appyto` — the product was renamed to **Feasters** later.
@@ -26,13 +25,12 @@ Engineering handoff doc. Read this top-to-bottom before changing anything.
 │  on Vercel   │                  │  Auth + Stor │                            │  (cron, npm scrape)│
 └──────────────┘                  └──────────────┘                            └────────────────────┘
        │                                  ▲
-   user browser                    Paynow → /api/billing/result (activates plan)
+   user browser
 ```
 
-- **Web app** — Next.js App Router on Vercel. Only reads jobs; handles auth, matching, applications, billing UI.
+- **Web app** — Next.js App Router on Vercel. Only reads jobs; handles auth, matching and applications.
 - **Supabase** — source of truth: Postgres (+ RLS), Auth (Google provider), Storage (`cvs` bucket).
 - **Scraper** — standalone Node script run by **GitHub Actions** every 6h; writes jobs to Supabase. Cannot run inside Vercel (serverless timeout vs 1800+ pages).
-- **Paynow** — Zimbabwe payment gateway; server-to-server callback activates subscriptions.
 
 ## 2. Tech stack
 - Next.js 15 (App Router, RSC), React 18, TypeScript
@@ -74,14 +72,13 @@ src/lib/logo.ts                Company logo from the employer email domain (favi
 src/lib/use-user.ts            Client hook: { name, email, avatar } from the session.
 src/lib/crypto.ts              AES-256-GCM encrypt/decrypt (SMTP pass, Google token).
 src/lib/google.ts              Gmail-send OAuth helpers (separate from login).
-src/lib/paynow.ts              Paynow initiate + poll + SHA-512 hash.
-src/lib/plans.ts               Tiers: free, free_plus, base $17, pro $25, premium $60.
+src/lib/plans.ts               Plan tiers — daily auto-apply caps only, nothing priced.
 src/lib/resume.ts              Resume model + 4 templates metadata + sample.
 src/lib/types.ts               Job (+logo_url), Profile (+resources, resource_files),
                                ResourceLink, ResourceFile, Settings, Application.
 
 src/app/page.tsx               Overview dashboard (shadcn cards).
-src/app/jobs|matches|applications|profile|settings|billing|onboarding|quick-apply
+src/app/jobs|matches|applications|profile|settings|onboarding|quick-apply
 src/app/resume/                CV builder (wizard + live A4 preview + print-to-PDF);
                                Templates.tsx = 4 pure-code CV templates.
 src/app/login + auth/callback  Google login + OAuth callback.
@@ -97,7 +94,8 @@ DEPLOY.md                      Step-by-step external setup guide.
 ```
 
 ## 4. Data model (Supabase — `supabase/schema.sql`)
-- `plans` — tiers (id, price_usd, daily_apply_cap, is_paid).
+- `plans` — tiers (id, daily_apply_cap). `price_usd`/`is_paid` are leftovers from
+  the removed billing system and are no longer read.
 - `profiles` — 1:1 with `auth.users`; preferences arrays, cv_path, plan_id,
   daily_cap, onboarded, **resume jsonb** (CV builder doc). Auto-created by a
   trigger on signup. RLS: own row.
@@ -106,7 +104,6 @@ DEPLOY.md                      Step-by-step external setup guide.
 - `jobs` — shared catalogue (id = `${source}:${source_uid}`); public read,
   service-role write. Sources: `jobszimbabwe`, `applynow`, `custom`.
 - `applications` — per-user log; UNIQUE(user_id, job_id). RLS: own row.
-- `subscriptions` + `payments` — Paynow billing. RLS: own row.
 - `activity_events` — append-only "memory" feed (Recent Activity). RLS: own row.
 - `push_subscriptions` — Web Push endpoints per device. RLS: own row.
 - `profiles.resources` (jsonb `[{label,url}]`) + `resource_files` (jsonb
@@ -156,8 +153,7 @@ production scale (>100 users). SMTP App Password path avoids this.
 ```
 NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET          # gmail.send (NOT needed for login)
-PAYNOW_INTEGRATION_ID, PAYNOW_INTEGRATION_KEY
-APP_URL=https://www.feasters.cloud              # build return/result/redirect URLs
+APP_URL=https://your-deployment-url             # builds redirect + cron URLs
 APPLY_ENCRYPTION_KEY                            # 32-byte hex, encrypts secrets
 CRON_SECRET                                     # protects /api/cron/apply + /api/cron/notify
 NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT   # Web Push
@@ -176,16 +172,16 @@ non-admins) AND every `/api/admin/*` route (403) — defence in depth;
 via the service role and sets an httpOnly `fx_vid` visitor cookie (covers anon +
 signed-in; `/api/analytics` is PUBLIC in middleware so logged-out hits aren't
 bounced). `analytics_events` has RLS on with **no policies** → service role only.
-The dashboard aggregates everything in `/api/admin/overview`: users/paid/MRR/
-revenue, applications, live visitors, a 14-day traffic chart, plan mix, top pages,
-recent payments/signups, and a "who's doing what" feed.
+The dashboard aggregates everything in `/api/admin/overview`: users, applications,
+live visitors, a 14-day traffic chart, plan mix, top pages, recent signups, and a
+"who's doing what" feed.
 Setup: run `supabase/migrations/003_analytics_events.sql` in the SQL editor + set
 `ADMIN_EMAILS` in Vercel.
 
 **Web Push** (`src/lib/push.ts`, `/api/push/{subscribe,unsubscribe}`,
 `/api/cron/notify`, push handlers in `public/sw.js`, `NotificationBell` in the
 top bar): user grants permission → browser subscription saved to
-`push_subscriptions` → the notify cron (once daily — see Hobby cron limit in §8)
+`push_subscriptions` → the notify cron (once daily — see the Hobby cron limit in §9)
 scores jobs scraped since each user's `profiles.jobs_notified_at` watermark and
 pushes "N new jobs match you".
 Setup: run `supabase/migrations/002_push_notifications.sql` in the Supabase SQL
@@ -193,13 +189,9 @@ editor and set the three VAPID vars in Vercel. Generate keys:
 `node -e "console.log(require('web-push').generateVAPIDKeys())"`.
 
 ## 8. Deploy / ops
-- GitHub: `manwerewil-creator/appyto` (private). `gh auth switch --user manwerewil-creator` to push.
-- Vercel: project **`appyto`** lives under the personal scope
-  **`manwerewil-creators-projects`** (account `manwerewil-creator`) — NOT the team
-  the Vercel MCP can reach (it 404s there). To deploy manually: `vercel link
-  --project appyto --scope manwerewil-creators-projects --token=…` then `vercel
-  --prod`. Domain `feasters.cloud` (apex 308→`www`). Pushing to `main` auto-deploys.
-  **Hobby (free) plan.**
+- GitHub: `manwerewil-creator/appyto` (public). `gh auth switch --user manwerewil-creator` to push.
+- Hosting: this repo is not tied to a Vercel project or a custom domain. To host it,
+  import it in Vercel and set the env vars from §7 (see `DEPLOY.md`).
 - Supabase project ref: `ipcxdotvjfudtohzpnmy` (NOT the project connected to the
   Supabase MCP — run SQL in the dashboard, not via MCP).
 - Crons (`vercel.json`): `/api/cron/apply` daily 06:00, `/api/cron/notify` daily 07:00
@@ -207,10 +199,9 @@ editor and set the three VAPID vars in Vercel. Generate keys:
 - Dev: `npm run dev` — we use **port 3010** (`next dev -p 3010`), matching APP_URL.
   Don't run `npm run build` / delete `.next` while a dev server is running (it kills it).
 
-## 8.5 Internships (a plan-gated slice of the job board)
+## 8.5 Internships (a filtered slice of the job board)
 Internships are **not** a separate product — they are the same scraped `jobs`,
-filtered to early-career roles and gated to the higher plans. No extra roles,
-tables, dashboards, or payments. (An earlier standalone marketplace, internally
+filtered to early-career roles. No extra roles, tables, dashboards, or payments. (An earlier standalone marketplace, internally
 "VisionBridge", was removed in favour of this — see "Removed" below.)
 - **Detection:** `src/lib/internships.ts` → `isInternshipJob(job)`. Pure-code regex
   over the structured fields (title/category/type/tags) plus the description, for
@@ -223,10 +214,10 @@ tables, dashboards, or payments. (An earlier standalone marketplace, internally
   everyone else. `/api/profile` now returns `plan_id` so the page knows the tier.
 - **Page:** `src/app/internships/page.tsx`. For eligible users it's the standard job
   board (`JobBoardCard`, apply-by-email via `/api/apply`) pre-filtered to
-  internships; for others, a Pro upsell. It's a seeker-mode nav item in `app-shell`.
+  internships. It's a seeker-mode nav item in `app-shell`.
 - **Removed:** the standalone "VisionBridge" marketplace — roles (`student|company|
   university`), routes `/student /company /university /register /pay`, the `api/vb/*`
-  Paynow endpoints, `vb_*` tables, and `src/lib/vb` + `src/components/vb` — was fully
+  payment endpoints, `vb_*` tables, and `src/lib/vb` + `src/components/vb` — was fully
   deleted. `supabase/migrations/008_drop_visionbridge.sql` is an **optional,
   destructive** cleanup that drops the orphaned `vb_*` objects in prod; the app
   ignores them whether or not you run it (migrations 004–007 were deleted).
@@ -245,8 +236,6 @@ tables, dashboards, or payments. (An earlier standalone marketplace, internally
   for static assets only). Bump `CACHE` version when changing it.
 - **OAuth callback must write cookies onto the redirect response** (`auth/callback/route.ts`)
   — the generic `supabaseServer()` cookie writer swallows errors in route handlers.
-- **Paynow test mode**: only the merchant email can pay until the integration is
-  switched to **Live** in the Paynow dashboard.
 - **Vercel Hobby = ONE cron run per day, max.** A `vercel.json` cron with a more
   frequent schedule (e.g. `0 */6 * * *`) makes **every deployment fail validation**,
   silently freezing production on the last good build. This bit us hard (deploys
@@ -255,7 +244,7 @@ tables, dashboards, or payments. (An earlier standalone marketplace, internally
   reintroduce "fading" gradient buttons.
 - **Section titles live ONLY in the top panel** (brown, in `app-shell.tsx`). Don't
   add a page-level `<h1>` that repeats the section name (hero/marketing headlines
-  that differ are fine, e.g. the dashboard hero or billing "Pick your plan").
+  that differ are fine, e.g. the dashboard hero).
 - **Animations must honour `prefers-reduced-motion`** (framer-motion `useReducedMotion`).
 
 ## 10. Current status & TODO
@@ -263,13 +252,11 @@ tables, dashboards, or payments. (An earlier standalone marketplace, internally
 multi-user data layer, CV builder (4 templates, page-size preview), onboarding,
 quick-apply, SMTP + Gmail-OAuth sending, **algorithmic email engine** (`src/lib/email`),
 profile resources (links + files attached to applications), manual + daily-cron
-auto-apply, Paynow billing (clean tile UI), Web Push + activity feed, full UI pass
-(solid buttons, brown top-panel title, hero image, framer-motion), deployed to
-www.feasters.cloud.
+auto-apply, Web Push + activity feed, full UI pass (solid buttons, brown top-panel
+title, hero image, framer-motion).
 
 **Needs the owner (config, not code):**
 - [ ] Set `GOOGLE_CLIENT_ID`/`SECRET` in **Vercel** env (lights up "Connect Gmail").
-- [ ] Take Paynow integration **Live** to accept real payments.
 - [ ] Confirm `CRON_SECRET` + `APP_URL` in Vercel (for the daily cron).
 
 **Engineering TODO / next:**
@@ -277,7 +264,6 @@ www.feasters.cloud.
 - [ ] Gmail `gmail.send` app verification for >100 users.
 - [ ] Auto-apply cron scales sequentially (4–6s/send) — add a queue for many users.
 - [ ] Free+ tier: actually gate on a pasted Gemini key (currently plan logic only).
-- [ ] Subscription expiry/renewal (Paynow is one-off charges; `period_end` set +30d but no auto-renew).
 - [ ] Rename repo/folder from Appyto → Feasters (cosmetic).
 - [ ] Upgrade Vercel to Pro to restore 6-hourly notify cron (currently daily — Hobby limit).
 

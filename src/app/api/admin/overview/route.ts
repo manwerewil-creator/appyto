@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { PLANS, PlanId, PAID_PLANS } from "@/lib/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +11,6 @@ export const dynamic = "force-dynamic";
 // in JS rather than maintaining SQL rollups.
 
 interface ProfileLite { email: string | null; full_name: string | null; plan_id: string | null; created_at: string | null; }
-interface PaymentLite { amount_usd: number | string; status: string; plan_id: string; created_at: string; }
 interface EventLite { created_at: string; visitor_id: string | null; user_id: string | null; path: string | null; }
 // PostgREST returns an embedded to-one relation as an object (older versions: array).
 type Embedded<T> = T | T[] | null;
@@ -29,20 +27,16 @@ export async function GET() {
   const d7 = new Date(now - 7 * 864e5).toISOString();
   const d30 = new Date(now - 30 * 864e5).toISOString();
   const d5m = new Date(now - 5 * 60_000).toISOString();
-  const paidIds = new Set<string>(PAID_PLANS.map((p) => p.id));
   const day = (iso: string) => iso.slice(0, 10);
 
   // ── Fire all reads in parallel ─────────────────────────────────────────────
   const [
     usersCountRes, profilesRes,
-    paidPaymentsRes, recentPaymentsRes,
     appsTotalRes, appsSentRes, appsTodayRes, apps7dRes,
     eventsRes, activityRes,
   ] = await Promise.all([
     sb.from("profiles").select("*", { count: "exact", head: true }),
     sb.from("profiles").select("email,full_name,plan_id,created_at").order("created_at", { ascending: false }).limit(5000),
-    sb.from("payments").select("amount_usd,status,plan_id,created_at").eq("status", "paid").limit(5000),
-    sb.from("payments").select("amount_usd,status,plan_id,created_at,profiles(email,full_name)").order("created_at", { ascending: false }).limit(10),
     sb.from("applications").select("*", { count: "exact", head: true }),
     sb.from("applications").select("*", { count: "exact", head: true }).eq("status", "sent"),
     sb.from("applications").select("*", { count: "exact", head: true }).gte("created_at", todayISO),
@@ -59,33 +53,12 @@ export async function GET() {
     const id = p.plan_id ?? "free";
     byPlan[id] = (byPlan[id] ?? 0) + 1;
   }
-  const paidUsers = profiles.filter((p) => paidIds.has(p.plan_id ?? "")).length;
   const newToday = profiles.filter((p) => p.created_at && p.created_at >= todayISO).length;
   const new7d = profiles.filter((p) => p.created_at && p.created_at >= d7).length;
   const new30d = profiles.filter((p) => p.created_at && p.created_at >= d30).length;
   const recentSignups = profiles.slice(0, 8).map((p) => ({
     email: p.email, name: p.full_name, plan: p.plan_id ?? "free", at: p.created_at,
   }));
-
-  // ── Revenue ────────────────────────────────────────────────────────────────
-  const paidPayments = (paidPaymentsRes.data ?? []) as PaymentLite[];
-  const sum = (rows: PaymentLite[]) => rows.reduce((s, r) => s + Number(r.amount_usd || 0), 0);
-  const revenueTotal = sum(paidPayments);
-  const revenue30 = sum(paidPayments.filter((p) => p.created_at >= d30));
-  const revenueToday = sum(paidPayments.filter((p) => p.created_at >= todayISO));
-  // MRR = recurring monthly value of currently-active paid plans.
-  const mrr = Object.entries(byPlan).reduce((s, [id, n]) => {
-    const plan = PLANS[id as PlanId];
-    return s + (plan?.isPaid ? plan.priceUsd * n : 0);
-  }, 0);
-  const recentPayments = ((recentPaymentsRes.data ?? []) as unknown as (PaymentLite & { profiles: Embedded<{ email: string | null; full_name: string | null }> })[])
-    .map((p) => {
-      const prof = one(p.profiles);
-      return {
-        email: prof?.email ?? null, name: prof?.full_name ?? null,
-        plan: p.plan_id, amount: Number(p.amount_usd || 0), status: p.status, at: p.created_at,
-      };
-    });
 
   // ── Applications ─────────────────────────────────────────────────────────--
   const applications = {
@@ -142,13 +115,11 @@ export async function GET() {
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     analyticsReady,
-    users: { total: usersTotal, paid: paidUsers, free: usersTotal - paidUsers, newToday, new7d, new30d, byPlan },
-    revenue: { totalUsd: revenueTotal, last30Usd: revenue30, todayUsd: revenueToday, mrrUsd: mrr, paidCount: paidPayments.length },
+    users: { total: usersTotal, newToday, new7d, new30d, byPlan },
     applications,
     traffic,
     series,
     topPaths,
-    recentPayments,
     recentSignups,
     recentActivity,
   });

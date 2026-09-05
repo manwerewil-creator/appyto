@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-  Users, Crown, DollarSign, Repeat, Send, Eye, RefreshCw, Radio, TrendingUp,
-  Activity as ActivityIcon, CreditCard, UserPlus, BarChart3, AlertTriangle, KeyRound,
+  Users, Send, Eye, RefreshCw, Radio, TrendingUp,
+  Activity as ActivityIcon, UserPlus, BarChart3, AlertTriangle, KeyRound,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,13 +20,11 @@ import { cn } from "@/lib/utils";
 interface Overview {
   generatedAt: string;
   analyticsReady: boolean;
-  users: { total: number; paid: number; free: number; newToday: number; new7d: number; new30d: number; byPlan: Record<string, number> };
-  revenue: { totalUsd: number; last30Usd: number; todayUsd: number; mrrUsd: number; paidCount: number };
+  users: { total: number; newToday: number; new7d: number; new30d: number; byPlan: Record<string, number> };
   applications: { total: number; sent: number; today: number; last7d: number };
   traffic: { views30: number; visitors30: number; views7d: number; visitors7d: number; viewsToday: number; visitorsToday: number; loggedInViews: number; live: number };
   series: { date: string; views: number; visitors: number; signups: number }[];
   topPaths: { path: string; views: number }[];
-  recentPayments: { email: string | null; name: string | null; plan: string; amount: number; status: string; at: string }[];
   recentSignups: { email: string | null; name: string | null; plan: string; at: string | null }[];
   recentActivity: { type: string; summary: string | null; at: string; email: string | null; name: string | null }[];
 }
@@ -37,7 +35,6 @@ const PLAN_TINTS: Record<string, string> = {
 };
 
 const fmt = (n: number) => n.toLocaleString();
-const money = (n: number) => `$${(Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "—";
@@ -163,7 +160,7 @@ export default function AdminDashboard() {
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Control centre</h2>
           <p className="text-sm text-muted-foreground">
-            {d ? `Updated ${timeAgo(d.generatedAt)}` : "Live payments, traffic & activity"}
+            {d ? `Updated ${timeAgo(d.generatedAt)}` : "Live traffic & activity"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -205,14 +202,9 @@ export default function AdminDashboard() {
           )}
 
           {/* KPIs */}
-          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid gap-4 sm:grid-cols-3">
             <Kpi Icon={Users} label="Total users" value={fmt(d.users.total)} tint="bg-blue-50 text-blue-600"
               sub={d.users.newToday > 0 ? `+${d.users.newToday} today` : undefined} />
-            <Kpi Icon={Crown} label="Paid users" value={fmt(d.users.paid)} tint="bg-violet-50 text-violet-600"
-              sub={d.users.total > 0 ? `${Math.round((d.users.paid / d.users.total) * 100)}% conversion` : undefined} />
-            <Kpi Icon={Repeat} label="MRR" value={money(d.revenue.mrrUsd)} tint="bg-emerald-50 text-emerald-600" />
-            <Kpi Icon={DollarSign} label="Revenue (all-time)" value={money(d.revenue.totalUsd)} tint="bg-amber-50 text-amber-600"
-              sub={d.revenue.todayUsd > 0 ? `+${money(d.revenue.todayUsd)} today` : undefined} />
             <Kpi Icon={Send} label="Applications sent" value={fmt(d.applications.sent)} tint="bg-rose-50 text-rose-600"
               sub={d.applications.today > 0 ? `+${d.applications.today} today` : undefined} />
             <Kpi Icon={Eye} label="Visitors (30d)" value={fmt(d.traffic.visitors30)} tint="bg-sky-50 text-sky-600"
@@ -284,41 +276,6 @@ export default function AdminDashboard() {
               )}
             </Panel>
           </div>
-
-          {/* Recent payments */}
-          <Panel title="Recent payments" Icon={CreditCard}
-            action={<span className="text-xs text-muted-foreground">{fmt(d.revenue.paidCount)} paid · {money(d.revenue.last30Usd)} in 30d</span>}>
-            {d.recentPayments.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">No payments yet.</p>
-            ) : (
-              <div className="-mx-2 overflow-x-auto">
-                <table className="w-full min-w-[440px] text-sm">
-                  <thead>
-                    <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                      <th className="px-2 py-2 font-medium">User</th>
-                      <th className="px-2 py-2 font-medium">Plan</th>
-                      <th className="px-2 py-2 text-right font-medium">Amount</th>
-                      <th className="px-2 py-2 font-medium">Status</th>
-                      <th className="px-2 py-2 text-right font-medium">When</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {d.recentPayments.map((p, i) => (
-                      <tr key={i}>
-                        <td className="max-w-[180px] truncate px-2 py-2.5">{p.email ?? "—"}</td>
-                        <td className="px-2 py-2.5">{PLAN_NAMES[p.plan] ?? p.plan}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums">{money(p.amount)}</td>
-                        <td className="px-2 py-2.5">
-                          <Badge variant={p.status === "paid" ? "success" : "secondary"} className="capitalize">{p.status}</Badge>
-                        </td>
-                        <td className="px-2 py-2.5 text-right text-xs text-muted-foreground">{timeAgo(p.at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Panel>
 
           {/* Signups + Activity */}
           <div className="grid gap-6 lg:grid-cols-2">
